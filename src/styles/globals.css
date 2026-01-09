@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: linear-gradient(135deg, #861D1D 0%, #2B1E1A 100%);
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Markdown editor customization */
+.w-md-editor {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.w-md-editor-text-input,
+.w-md-editor-text-textarea,
+.w-md-editor-text {
+  color: white !important;
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.w-md-editor-preview {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
