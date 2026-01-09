@@ -99,14 +99,23 @@ SantoNinoNZ/
    - Click "New Post" to create content
    - Edit existing posts by clicking the edit button
 
-### Creating a GitHub Token
+### Authentication Options
+
+#### Option 1: Quick Sign In (Recommended)
+1. Click **"Quick Sign In"** on the admin interface
+2. Scan the QR code with your phone or click the verification link
+3. Authorize the Santo Niño Admin app on GitHub
+4. You're automatically logged in!
+
+#### Option 2: Personal Access Token (Advanced)
 1. Go to [GitHub Settings → Developer settings → Personal access tokens](https://github.com/settings/tokens)
 2. Click "Generate new token (classic)"
 3. Set expiration and select scopes:
    - ✅ **repo** (Full control of private repositories)
 4. Generate and copy the token
-5. Use this token to authenticate in the admin interface
+5. Choose "Personal Access Token" option in the admin interface
 
+**Note**: Quick Sign In requires a GitHub App to be set up. See [GitHub App Setup Guide](./docs/GITHUB_APP_SETUP.md) for initial configuration.
 ## 📖 Content Management Guide
 
 ### Creating a New Post

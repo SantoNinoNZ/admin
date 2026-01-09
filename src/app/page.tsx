@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { GitHubAuth } from '@/components/GitHubAuth'
+import { GitHubDeviceAuthComponent } from '@/components/GitHubDeviceAuth'
 import { Dashboard } from '@/components/Dashboard'
 
 export default function Home() {
@@ -41,7 +41,7 @@ export default function Home() {
         </header>
 
         {!isAuthenticated ? (
-          <GitHubAuth onAuth={handleAuth} />
+          <GitHubDeviceAuthComponent onAuth={handleAuth} />
         ) : (
           <Dashboard token={token!} onLogout={handleLogout} />
         )}
