@@ -54,10 +54,16 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
   const handleImageUpload = async (file: File): Promise<string> => {
     try {
       setUploading(true)
+      notification.info({
+        message: 'Uploading...',
+        description: `Uploading ${file.name}...`,
+        duration: 2,
+      })
       const imageUrl = await supabaseAPI.uploadImage(file, 'images')
       notification.success({
-        message: 'Image Uploaded',
-        description: 'Image uploaded successfully'
+        message: 'Image Uploaded Successfully!',
+        description: 'The image has been inserted into your content.',
+        duration: 4,
       })
       return imageUrl
     } catch (err) {
@@ -92,15 +98,25 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
                 try {
                   const url = await handleImageUpload(file)
                   const cm = editor.codemirror
-                  const stat = editor.getState(cm)
-                  const options = editor.options
                   const startPoint = cm.getCursor('start')
-                  const endPoint = cm.getCursor('end')
 
-                  cm.replaceSelection(`![](${url})`)
+                  // Insert image markdown with alt text placeholder
+                  const imageMarkdown = `![Image description](${url})`
+                  cm.replaceSelection(imageMarkdown)
 
-                  const cursorPos = startPoint.line
-                  cm.setSelection({ line: cursorPos, ch: 2 }, { line: cursorPos, ch: 2 })
+                  // Position cursor in the alt text area for easy editing
+                  const newCursorPos = {
+                    line: startPoint.line,
+                    ch: startPoint.ch + 2  // Position after ![
+                  }
+                  cm.setCursor(newCursorPos)
+
+                  // Select the "Image description" text so user can immediately type
+                  cm.setSelection(
+                    { line: startPoint.line, ch: startPoint.ch + 2 },
+                    { line: startPoint.line, ch: startPoint.ch + 2 + 17 } // Length of "Image description"
+                  )
+
                   cm.focus()
                 } catch (err) {
                   console.error('Image upload failed:', err)
@@ -141,11 +157,11 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
           if (file) {
             try {
               const url = await handleImageUpload(file)
-              // Insert at cursor position
-              const textarea = document.querySelector('.CodeMirror-code') as HTMLElement
-              if (textarea) {
-                setContent(prev => prev + `\n![](${url})\n`)
-              }
+              // Insert at current cursor position with placeholder text
+              setContent(prev => {
+                const imageMarkdown = `\n![Image description](${url})\n`
+                return prev + imageMarkdown
+              })
             } catch (err) {
               console.error('Paste upload failed:', err)
             }
@@ -163,7 +179,10 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
           e.preventDefault()
           try {
             const url = await handleImageUpload(files[i])
-            setContent(prev => prev + `\n![](${url})\n`)
+            setContent(prev => {
+              const imageMarkdown = `\n![Image description](${url})\n`
+              return prev + imageMarkdown
+            })
           } catch (err) {
             console.error('Drop upload failed:', err)
           }
