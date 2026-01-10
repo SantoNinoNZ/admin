@@ -5,7 +5,7 @@
 
 # Get your Project ID from the "Project Settings" page in your Supabase dashboard
 # or from the URL of your dashboard: https://supabase.com/dashboard/project/<project_id>
-project_id = "your-project-id"
+project_id = "uvxrdmwmscevovbbrnky"
 
 [api]
 port = 54321

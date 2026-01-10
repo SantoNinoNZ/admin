@@ -61,7 +61,7 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
         'link', 'image', '|',
         'preview', 'side-by-side', 'fullscreen', '|',
         'guide'
-      ],
+      ] as const,
     }
   }, [])
 
