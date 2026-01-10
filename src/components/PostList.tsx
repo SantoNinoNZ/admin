@@ -1,92 +1,116 @@
 'use client'
 
-import { Post } from '@/types'
-import { Edit, Trash2, Calendar, FileText } from 'lucide-react'
+import { useState } from 'react'
+import type { PostWithDetails } from '@/types'
+import { List, Button, Modal, Tag, Space, Typography, Empty, Avatar } from 'antd'
+import {
+  EditOutlined,
+  DeleteOutlined,
+  CalendarOutlined,
+  FolderOutlined,
+  TagOutlined,
+} from '@ant-design/icons'
+
+const { Text, Paragraph } = Typography
 
 interface PostListProps {
-  posts: Post[];
-  onEdit: (post: Post) => void;
-  onDelete: (post: Post) => void;
+  posts: PostWithDetails[]
+  onEdit: (post: PostWithDetails) => void
+  onDelete: (post: PostWithDetails) => void
 }
 
 export function PostList({ posts, onEdit, onDelete }: PostListProps) {
+  const [postToDelete, setPostToDelete] = useState<PostWithDetails | null>(null)
+
+  const showDeleteModal = (post: PostWithDetails) => {
+    setPostToDelete(post)
+  }
+
+  const handleDeleteOk = () => {
+    if (postToDelete) {
+      onDelete(postToDelete)
+      setPostToDelete(null)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setPostToDelete(null)
+  }
+
   if (posts.length === 0) {
-    return (
-      <div className="bg-white/10 backdrop-blur-sm rounded-lg p-12 text-center">
-        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-xl font-lora text-white mb-2">No posts found</h3>
-        <p className="text-gray-300">Create your first post to get started</p>
-      </div>
-    )
+    return <Empty description="No posts found. Click 'New Post' to get started." />
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-lora font-bold text-white">
-          Posts ({posts.length})
-        </h2>
-      </div>
-
-      <div className="grid gap-4">
-        {posts.map((post) => (
-          <div
-            key={post.slug}
-            className="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/15 transition-colors"
+    <>
+      <List
+        itemLayout="vertical"
+        size="large"
+        dataSource={posts}
+        renderItem={post => (
+          <List.Item
+            key={post.id}
+            actions={[
+              <Button icon={<EditOutlined />} onClick={() => onEdit(post)}>Edit</Button>,
+              <Button icon={<DeleteOutlined />} danger onClick={() => showDeleteModal(post)}>Delete</Button>,
+            ]}
+            extra={
+              post.image_url && (
+                <img
+                  width={200}
+                  alt="Post featured image"
+                  src={post.image_url}
+                  style={{ objectFit: 'cover', height: 120 }}
+                />
+              )
+            }
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-lora font-semibold text-white mb-2 truncate">
-                  {post.title || post.slug}
-                </h3>
+            <List.Item.Meta
+              avatar={<Avatar src={post.author_avatar} />}
+              title={<a onClick={() => onEdit(post)}>{post.title}</a>}
+              description={
+                <Space size="middle">
+                  <Text type="secondary">
+                    <CalendarOutlined style={{ marginRight: 8 }} />
+                    {post.published_at
+                      ? new Date(post.published_at).toLocaleDateString()
+                      : `Created: ${new Date(post.created_at).toLocaleDateString()}`}
+                  </Text>
+                   {post.category_name && (
+                    <Tag icon={<FolderOutlined />} color="blue">
+                      {post.category_name}
+                    </Tag>
+                  )}
+                </Space>
+              }
+            />
+            <Paragraph ellipsis={{ rows: 2, expandable: false }}>
+              {post.excerpt}
+            </Paragraph>
+            <Space wrap>
+              <Tag color={post.published ? 'green' : 'orange'}>
+                {post.published ? 'Published' : 'Draft'}
+              </Tag>
+              {Array.isArray(post.tags) && post.tags.map((tag: any) => (
+                <Tag icon={<TagOutlined />} key={tag.id}>{tag.name}</Tag>
+              ))}
+            </Space>
+          </List.Item>
+        )}
+      />
 
-                <div className="flex items-center space-x-4 mb-3">
-                  <div className="flex items-center text-gray-300 text-sm">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {post.date ? new Date(post.date).toLocaleDateString() : 'No date'}
-                  </div>
-                  <div className="text-gray-400 text-sm">
-                    {post.slug}.md
-                  </div>
-                </div>
-
-                {post.excerpt && (
-                  <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                    {post.excerpt}
-                  </p>
-                )}
-
-                {post.imageUrl && (
-                  <div className="text-xs text-gray-400 mb-3">
-                    📷 Has featured image
-                  </div>
-                )}
-
-                <div className="text-xs text-gray-400">
-                  Content: {post.content.length} characters
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 ml-4">
-                <button
-                  onClick={() => onEdit(post)}
-                  className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                  title="Edit post"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => onDelete(post)}
-                  className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                  title="Delete post"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+      <Modal
+        title="Delete Post"
+        open={!!postToDelete}
+        onOk={handleDeleteOk}
+        onCancel={handleDeleteCancel}
+        okText="Delete"
+        okButtonProps={{ danger: true }}
+        cancelText="Cancel"
+      >
+        <p>Are you sure you want to delete the post titled &quot;{postToDelete?.title}&quot;?</p>
+        <p>This action cannot be undone.</p>
+      </Modal>
+    </>
   )
 }

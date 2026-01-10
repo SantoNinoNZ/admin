@@ -1,91 +1,149 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { GitHubAPI } from '@/lib/github-api'
-import { Post, GitHubUser } from '@/types'
+import type { Session } from '@supabase/supabase-js'
+import { supabaseAPI } from '@/lib/supabase-api'
+import type { PostWithDetails, PostFormData } from '@/types'
 import { PostEditor } from './PostEditor'
 import { PostList } from './PostList'
-import { Plus, LogOut, User } from 'lucide-react'
+import {
+  Layout,
+  Menu,
+  Spin,
+  Button,
+  Alert,
+  Avatar,
+  Space,
+  Typography,
+} from 'antd'
+import {
+  PlusOutlined,
+  EditOutlined,
+  LogoutOutlined,
+  UserOutlined,
+  LeftOutlined,
+  RightOutlined,
+} from '@ant-design/icons'
+import { notification } from 'antd'
+
+const { Sider, Header, Content } = Layout
+const { Title } = Typography
 
 interface DashboardProps {
-  token: string;
-  onLogout: () => void;
+  session: Session
+  onLogout: () => void
 }
 
-export function Dashboard({ token, onLogout }: DashboardProps) {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [user, setUser] = useState<GitHubUser | null>(null)
+export function Dashboard({ session, onLogout }: DashboardProps) {
+  const [posts, setPosts] = useState<PostWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [selectedPost, setSelectedPost] = useState<PostFormData | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
-
-  const githubAPI = new GitHubAPI(token)
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
-    loadInitialData()
+    loadPosts()
   }, [])
 
-  const loadInitialData = async () => {
+  const loadPosts = async () => {
     try {
       setLoading(true)
-      const [userData, postFiles] = await Promise.all([
-        githubAPI.getUser(),
-        githubAPI.getPostFiles()
-      ])
-
-      setUser(userData)
-
-      // Load post content for each file
-      const postsData = await Promise.all(
-        postFiles.map(file => githubAPI.getPostContent(file.name))
-      )
-
-      setPosts(postsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()))
+      setError('')
+      const postsData = await supabaseAPI.getPosts({
+        orderBy: 'updated_at',
+        orderDirection: 'desc'
+      })
+      setPosts(postsData)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data')
+      const message = err instanceof Error ? err.message : 'Failed to load posts'
+      setError(message)
+      notification.error({ message: 'Error', description: message });
     } finally {
       setLoading(false)
     }
   }
 
   const handleCreateNew = () => {
-    const newPost: Post = {
+    const newPost: PostFormData = {
       slug: '',
       title: '',
-      date: new Date().toISOString().split('T')[0],
       excerpt: '',
+      content: '',
       imageUrl: '',
-      content: ''
+      published: false,
+      categoryId: undefined,
+      tagIds: []
     }
     setSelectedPost(newPost)
     setIsCreating(true)
   }
 
-  const handleEditPost = (post: Post) => {
-    setSelectedPost(post)
+  const handleEditPost = (post: PostWithDetails) => {
+    const formData: PostFormData = {
+      id: post.id,
+      slug: post.slug,
+      title: post.title,
+      excerpt: post.excerpt || '',
+      content: post.content,
+      imageUrl: post.image_url || '',
+      published: post.published,
+      publishedAt: post.published_at || undefined,
+      categoryId: post.category_id || undefined,
+      tagIds: (Array.isArray(post.tags) ? post.tags.map((t: any) => t.id) : []) || [],
+      metaTitle: post.meta_title || '',
+      metaDescription: post.meta_description || '',
+      metaKeywords: post.meta_keywords || [],
+      ogImage: post.og_image || ''
+    }
+    setSelectedPost(formData)
     setIsCreating(false)
   }
 
-  const handleSavePost = async (post: Post) => {
+  const handleSavePost = async (postData: PostFormData) => {
     try {
-      await githubAPI.savePost(post, isCreating)
-      await loadInitialData() // Refresh the list
+      const payload = {
+        slug: postData.slug,
+        title: postData.title,
+        excerpt: postData.excerpt || null,
+        content: postData.content,
+        image_url: postData.imageUrl || null,
+        published: postData.published || false,
+        category_id: postData.categoryId || null,
+        meta_title: postData.metaTitle || null,
+        meta_description: postData.metaDescription || null,
+        meta_keywords: postData.metaKeywords || null,
+        og_image: postData.ogImage || null,
+      };
+
+      if (isCreating) {
+        await supabaseAPI.createPost(payload, postData.tagIds);
+        notification.success({ message: 'Success', description: 'Post created successfully!' });
+      } else if (postData.id) {
+        await supabaseAPI.updatePost(postData.id, payload, postData.tagIds);
+        notification.success({ message: 'Success', description: 'Post updated successfully!' });
+      }
+
+      await loadPosts()
       setSelectedPost(null)
       setIsCreating(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save post')
+      const message = err instanceof Error ? err.message : 'Failed to save post'
+      setError(message)
+      notification.error({ message: 'Error', description: message });
+      throw err
     }
   }
 
-  const handleDeletePost = async (post: Post) => {
-    if (!confirm(`Are you sure you want to delete "${post.title}"?`)) return
-
+  const handleDeletePost = async (post: PostWithDetails) => {
     try {
-      await githubAPI.deletePost(post.slug, post.sha!)
-      await loadInitialData() // Refresh the list
+      await supabaseAPI.deletePost(post.id)
+      await loadPosts()
+      notification.success({ message: 'Success', description: 'Post deleted successfully!' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete post')
+      const message = err instanceof Error ? err.message : 'Failed to delete post'
+      setError(message)
+      notification.error({ message: 'Error', description: message });
     }
   }
 
@@ -94,82 +152,129 @@ export function Dashboard({ token, onLogout }: DashboardProps) {
     setIsCreating(false)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="text-white text-lg">Loading...</div>
-      </div>
-    )
+  const user = {
+    name: session.user.user_metadata?.full_name || session.user.email || 'User',
+    email: session.user.email || '',
+    avatar: session.user.user_metadata?.avatar_url || ''
   }
 
-  if (error) {
+  const renderContent = () => {
+    if (loading) {
+      return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
+    }
+    if (error && posts.length === 0) {
+      return <Alert message="Error" description={error} type="error" showIcon closable />;
+    }
+    if (selectedPost) {
+      return <PostEditor post={selectedPost} isNew={isCreating} onSave={handleSavePost} onCancel={handleCancel} />;
+    }
     return (
-      <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4">
-        <p className="text-red-200">{error}</p>
-        <button
-          onClick={loadInitialData}
-          className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-        >
-          Retry
-        </button>
-      </div>
-    )
+      <>
+        <Title level={2}>Posts</Title>
+        <p className="mb-4 text-gray-500">Manage your blog posts ({posts.length} total)</p>
+        <PostList posts={posts} onEdit={handleEditPost} onDelete={handleDeletePost} />
+      </>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {user && (
-            <div className="flex items-center space-x-3">
-              <img
-                src={user.avatar_url}
-                alt={user.name}
-                className="w-10 h-10 rounded-full"
-              />
-              <div>
-                <p className="text-white font-semibold">{user.name}</p>
-                <p className="text-gray-300 text-sm">@{user.login}</p>
-              </div>
-            </div>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        style={{
+          background: '#001529'
+        }}
+        trigger={null}
+      >
+        <div style={{ padding: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <Space orientation="vertical" align="center" style={{ width: '100%' }}>
+            <Avatar
+              size={collapsed ? 40 : 64}
+              icon={<UserOutlined />}
+              style={{ backgroundColor: '#1890ff' }}
+            />
+            {!collapsed && (
+              <>
+                <Title level={5} style={{ color: 'white', margin: '8px 0 0 0' }}>
+                  {user.name}
+                </Title>
+                <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '12px' }}>
+                  {user.email}
+                </span>
+              </>
+            )}
+          </Space>
+        </div>
+        <Menu
+          theme="dark"
+          defaultSelectedKeys={['1']}
+          mode="inline"
+          style={{ borderRight: 0 }}
+          items={[
+            {
+              key: '1',
+              icon: <EditOutlined />,
+              label: 'Posts',
+            },
+            {
+              key: '2',
+              icon: <LogoutOutlined />,
+              label: 'Sign Out',
+              onClick: onLogout,
+            },
+          ]}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            width: '100%',
+            padding: '16px',
+            textAlign: 'center',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setCollapsed(!collapsed)}
+        >
+          {collapsed ? (
+            <RightOutlined style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '14px' }} />
+          ) : (
+            <LeftOutlined style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '14px' }} />
           )}
         </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={handleCreateNew}
-            className="flex items-center space-x-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Post</span>
-          </button>
-          <button
-            onClick={onLogout}
-            className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      {selectedPost ? (
-        <PostEditor
-          post={selectedPost}
-          isNew={isCreating}
-          onSave={handleSavePost}
-          onCancel={handleCancel}
-          githubAPI={githubAPI}
-        />
-      ) : (
-        <PostList
-          posts={posts}
-          onEdit={handleEditPost}
-          onDelete={handleDeletePost}
-        />
-      )}
-    </div>
+      </Sider>
+      <Layout>
+        <Header style={{
+          background: '#fff',
+          padding: '0 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <div>
+            <Title level={4} style={{ margin: 0 }}>
+              {selectedPost ? (isCreating ? 'Create Post' : 'Edit Post') : 'Posts'}
+            </Title>
+          </div>
+          {!selectedPost && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateNew}>
+              New Post
+            </Button>
+          )}
+        </Header>
+        <Content style={{ margin: '24px 16px', padding: 24, background: '#f0f2f5', minHeight: 280 }}>
+          <div style={{ background: '#fff', padding: 24, minHeight: 360 }}>
+            {renderContent()}
+          </div>
+        </Content>
+      </Layout>
+    </Layout>
   )
 }
+

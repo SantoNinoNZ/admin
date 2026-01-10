@@ -1,60 +1,49 @@
-export interface Post {
-  slug: string;
-  title: string;
-  date: string;
-  excerpt?: string;
-  imageUrl?: string;
-  content: string;
-  sha?: string; // GitHub file SHA for updates
+import { Database } from './database.types'
+
+// ============================================================================
+// Supabase Type Aliases
+// ============================================================================
+
+export type Author = Database['public']['Tables']['authors']['Row']
+export type Category = Database['public']['Tables']['categories']['Row']
+export type Tag = Database['public']['Tables']['tags']['Row']
+export type Post = Database['public']['Tables']['posts']['Row']
+export type PostWithDetails = Database['public']['Views']['posts_with_details']['Row']
+
+// Insert types for forms
+export type PostInsert = Database['public']['Tables']['posts']['Insert']
+export type PostUpdate = Database['public']['Tables']['posts']['Update']
+export type CategoryInsert = Database['public']['Tables']['categories']['Insert']
+export type TagInsert = Database['public']['Tables']['tags']['Insert']
+
+// ============================================================================
+// Form Data Types
+// ============================================================================
+
+/**
+ * Extended Post type for UI forms
+ * Compatible with PostEditor component
+ */
+export interface PostFormData {
+  id?: string
+  slug: string
+  title: string
+  excerpt?: string
+  content: string
+  imageUrl?: string
+  published?: boolean
+  publishedAt?: string
+  categoryId?: string
+  tagIds?: string[]
+  // SEO
+  metaTitle?: string
+  metaDescription?: string
+  metaKeywords?: string[]
+  ogImage?: string
 }
 
-export interface GitHubFile {
-  name: string;
-  path: string;
-  sha: string;
-  size: number;
-  url: string;
-  html_url: string;
-  git_url: string;
-  download_url: string;
-  type: 'file' | 'dir';
-}
+// ============================================================================
+// Re-export database types for convenience
+// ============================================================================
 
-export interface GitHubCommitResponse {
-  content: {
-    name: string;
-    path: string;
-    sha: string;
-    size: number;
-    url: string;
-    html_url: string;
-    git_url: string;
-    download_url: string;
-    type: string;
-  };
-  commit: {
-    sha: string;
-    node_id: string;
-    url: string;
-    html_url: string;
-    author: {
-      name: string;
-      email: string;
-      date: string;
-    };
-    committer: {
-      name: string;
-      email: string;
-      date: string;
-    };
-    message: string;
-  };
-}
-
-export interface GitHubUser {
-  login: string;
-  id: number;
-  avatar_url: string;
-  name: string;
-  email?: string;
-}
+export type { Database }

@@ -4,9 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background: linear-gradient(135deg, #861D1D 0%, #2B1E1A 100%);
-  min-height: 100vh;
+/* Global typography */
+html,body,#__next{
+  height:100%;
+}
+body{
+  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
 /* Custom scrollbar */
@@ -15,31 +20,56 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(15,23,42,0.03);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(15,23,42,0.12);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(15,23,42,0.18);
 }
 
-/* Markdown editor customization */
-.w-md-editor {
-  background-color: rgba(255, 255, 255, 0.1) !important;
+/* SimpleMDE Markdown editor customization */
+.EasyMDEContainer {
+  background-color: #ffffff;
 }
 
-.w-md-editor-text-input,
-.w-md-editor-text-textarea,
-.w-md-editor-text {
-  color: white !important;
-  background-color: rgba(0, 0, 0, 0.3) !important;
+.EasyMDEContainer .CodeMirror {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #d9d9d9;
+  border-radius: 2px;
+  min-height: 400px;
 }
 
-.w-md-editor-preview {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
+.EasyMDEContainer .CodeMirror-cursor {
+  border-left-color: #000000;
+}
+
+.EasyMDEContainer .editor-toolbar {
+  background-color: #fafafa;
+  border: 1px solid #d9d9d9;
+  border-bottom: none;
+}
+
+.EasyMDEContainer .editor-toolbar button {
+  color: #000000 !important;
+}
+
+.EasyMDEContainer .editor-toolbar button:hover {
+  background-color: #e6e6e6;
+}
+
+.EasyMDEContainer .editor-toolbar.fullscreen,
+.EasyMDEContainer .CodeMirror-fullscreen {
+  z-index: 1000;
+}
+
+.EasyMDEContainer .editor-preview,
+.EasyMDEContainer .editor-preview-side {
+  background-color: #ffffff;
+  color: #000000;
 }

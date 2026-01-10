@@ -1,0 +1,47 @@
+# .github/workflows/db-migrate.yml
+name: 'Supabase DB Migration'
+
+on:
+  push:
+    branches:
+      - main  # Or your primary branch (e.g., master)
+    paths:
+      - 'supabase/migrations/**' # Only run when migration files change
+
+jobs:
+  migrate-db:
+    runs-on: ubuntu-latest
+    
+    env:
+      # The user must set these secrets in GitHub repository settings
+      # Settings > Secrets and variables > Actions > New repository secret
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Wait for database to be ready
+        run: |
+          echo "Waiting for Supabase database to become available..."
+          # The `supabase db push` command will wait for the DB to be ready,
+          # so no explicit wait is needed here, but this is a good place
+          # to add one if you experience issues.
+
+      - name: Push database migrations
+        run: |
+          # The `config.toml` file must contain your project_id
+          # The `SUPABASE_DB_PASSWORD` is required for `db push`.
+          supabase db push
+
+      - name: Verify migration
+        run: |
+          echo "Database migration complete. You can add verification steps here."
+          # For example, you could run a script to query the database
+          # and ensure the new schema is present.

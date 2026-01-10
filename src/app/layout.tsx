@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { ConfigProvider, theme } from 'antd';
+import AntdRegistry from '@/components/AntdRegistry';
 import '../styles/globals.css'
 
 export const metadata: Metadata = {
@@ -14,9 +16,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-roboto">
-        <div className="min-h-screen">
-          {children}
-        </div>
+        <AntdRegistry>
+          <ConfigProvider
+            theme={{
+              algorithm: theme.darkAlgorithm,
+              token: {
+                colorPrimary: '#2563EB',
+              },
+            }}
+          >
+            {children}
+          </ConfigProvider>
+        </AntdRegistry>
       </body>
     </html>
   )

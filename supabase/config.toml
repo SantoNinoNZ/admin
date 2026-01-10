@@ -1,0 +1,27 @@
+# supabase/config.toml
+
+# This file is used by the Supabase CLI to identify your project.
+# The `project_id` is required for Supabase CLI commands run from a CI/CD environment.
+
+# Get your Project ID from the "Project Settings" page in your Supabase dashboard
+# or from the URL of your dashboard: https://supabase.com/dashboard/project/<project_id>
+project_id = "your-project-id"
+
+[api]
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+port = 54323
+
+# The "migrations" folder is where the Supabase CLI will store your database migrations.
+# This workflow uses a single MIGRATION.sql file for simplicity, but for more complex
+# projects, you would use `supabase migration new <name>` to create individual migration files here.
+[migrations]
+path = "supabase/migrations"
