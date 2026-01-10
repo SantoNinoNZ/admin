@@ -9,6 +9,7 @@ import {
   CalendarOutlined,
   FolderOutlined,
   TagOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 
 const { Text, Paragraph } = Typography
@@ -66,7 +67,7 @@ export function PostList({ posts, onEdit, onDelete }: PostListProps) {
             }
           >
             <List.Item.Meta
-              avatar={<Avatar src={post.author_avatar} />}
+              avatar={<Avatar src={post.author_avatar_url || undefined} icon={<UserOutlined />} />}
               title={<a onClick={() => onEdit(post)}>{post.title}</a>}
               description={
                 <Space size="middle">
