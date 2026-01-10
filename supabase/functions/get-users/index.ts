@@ -9,9 +9,17 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')!
     console.log('Edge function "get-users" called.');
-    console.log('Authorization Header:', authHeader ? 'Present' : 'Missing');
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('Authorization header is missing.');
+      return new Response(JSON.stringify({ error: 'Authorization header is missing' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
+    }
+    console.log('Authorization Header:', 'Present');
 
     // Create a Supabase client with the Auth context of the logged in user.
     const supabaseClient = createClient(
