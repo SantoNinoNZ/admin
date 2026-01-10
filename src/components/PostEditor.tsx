@@ -27,6 +27,7 @@ import {
 } from '@ant-design/icons'
 import type { PostFormData, Category, Tag as TagType } from '@/types'
 import { supabaseAPI } from '@/lib/supabase-api'
+import { notification } from 'antd'
 import 'easymde/dist/easymde.min.css'
 
 const SimpleMDE = dynamic(() => import('react-simplemde-editor'), { ssr: false })
@@ -50,20 +51,73 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
   const [error, setError] = useState('')
   const [content, setContent] = useState(post.content || '')
 
+  const handleImageUpload = async (file: File): Promise<string> => {
+    try {
+      setUploading(true)
+      const imageUrl = await supabaseAPI.uploadImage(file, 'images')
+      notification.success({
+        message: 'Image Uploaded',
+        description: 'Image uploaded successfully'
+      })
+      return imageUrl
+    } catch (err) {
+      notification.error({
+        message: 'Upload Failed',
+        description: err instanceof Error ? err.message : 'Failed to upload image'
+      })
+      throw err
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const simpleMdeOptions = useMemo(() => {
     return {
       spellChecker: false,
-      placeholder: 'Write your post content in Markdown...',
-      status: false,
+      placeholder: 'Write your post content in Markdown... (You can paste or drag images directly)',
+      status: uploading ? ['Uploading image...'] : false,
       toolbar: [
         'bold', 'italic', 'heading', '|',
         'quote', 'unordered-list', 'ordered-list', '|',
-        'link', 'image', '|',
+        'link',
+        {
+          name: 'image',
+          action: async (editor: any) => {
+            const input = document.createElement('input')
+            input.type = 'file'
+            input.accept = 'image/*'
+            input.onchange = async (e: any) => {
+              const file = e.target.files?.[0]
+              if (file) {
+                try {
+                  const url = await handleImageUpload(file)
+                  const cm = editor.codemirror
+                  const stat = editor.getState(cm)
+                  const options = editor.options
+                  const startPoint = cm.getCursor('start')
+                  const endPoint = cm.getCursor('end')
+
+                  cm.replaceSelection(`![](${url})`)
+
+                  const cursorPos = startPoint.line
+                  cm.setSelection({ line: cursorPos, ch: 2 }, { line: cursorPos, ch: 2 })
+                  cm.focus()
+                } catch (err) {
+                  console.error('Image upload failed:', err)
+                }
+              }
+            }
+            input.click()
+          },
+          className: 'fa fa-picture-o',
+          title: 'Insert Image (Upload)',
+        },
+        '|',
         'preview', 'side-by-side', 'fullscreen', '|',
         'guide'
       ] as const,
     }
-  }, [])
+  }, [uploading])
 
   useEffect(() => {
     form.setFieldsValue({
@@ -73,6 +127,64 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
     setContent(post.content || '')
     loadCategoriesAndTags()
   }, [post, form])
+
+  // Add paste and drop handlers for images
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          e.preventDefault()
+          const file = items[i].getAsFile()
+          if (file) {
+            try {
+              const url = await handleImageUpload(file)
+              // Insert at cursor position
+              const textarea = document.querySelector('.CodeMirror-code') as HTMLElement
+              if (textarea) {
+                setContent(prev => prev + `\n![](${url})\n`)
+              }
+            } catch (err) {
+              console.error('Paste upload failed:', err)
+            }
+          }
+        }
+      }
+    }
+
+    const handleDrop = async (e: DragEvent) => {
+      const files = e.dataTransfer?.files
+      if (!files || files.length === 0) return
+
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].type.indexOf('image') !== -1) {
+          e.preventDefault()
+          try {
+            const url = await handleImageUpload(files[i])
+            setContent(prev => prev + `\n![](${url})\n`)
+          } catch (err) {
+            console.error('Drop upload failed:', err)
+          }
+        }
+      }
+    }
+
+    const editor = document.querySelector('.EasyMDEContainer')
+    if (editor) {
+      editor.addEventListener('paste', handlePaste as any)
+      editor.addEventListener('drop', handleDrop as any)
+      editor.addEventListener('dragover', (e) => e.preventDefault())
+    }
+
+    return () => {
+      if (editor) {
+        editor.removeEventListener('paste', handlePaste as any)
+        editor.removeEventListener('drop', handleDrop as any)
+      }
+    }
+  }, [])
 
   const loadCategoriesAndTags = async () => {
     try {
