@@ -20,8 +20,4 @@ major_version = 15
 [studio]
 port = 54323
 
-# The "migrations" folder is where the Supabase CLI will store your database migrations.
-# This workflow uses a single MIGRATION.sql file for simplicity, but for more complex
-# projects, you would use `supabase migration new <name>` to create individual migration files here.
-[migrations]
-path = "supabase/migrations"
+
