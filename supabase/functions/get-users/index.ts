@@ -9,6 +9,10 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization')!
+    console.log('Edge function "get-users" called.');
+    console.log('Authorization Header:', authHeader ? 'Present' : 'Missing');
+
     // Create a Supabase client with the Auth context of the logged in user.
     const supabaseClient = createClient(
       // Supabase API URL - env var exported by default.
@@ -17,19 +21,28 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       // Create client with Auth context of the user that called the function.
       // This way your row-level-security policies are applied.
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      { global: { headers: { Authorization: authHeader } } }
     )
 
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
+
+    if (userError) {
+      console.error('Error getting user:', userError.message);
+      return new Response(JSON.stringify({ error: 'Error getting user: ' + userError.message }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      })
+    }
 
     if (!user) {
+      console.log('User not found or not authenticated. Returning 401.');
       return new Response(JSON.stringify({ error: 'User not authenticated' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       })
     }
+
+    console.log('User authenticated:', user.id);
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -39,14 +52,18 @@ serve(async (req) => {
     const { data: users, error } = await supabaseAdmin.auth.admin.listUsers()
 
     if (error) {
+      console.error('Error listing users with admin client:', error.message);
       throw error
     }
+
+    console.log('Successfully listed users.');
 
     return new Response(JSON.stringify({ users }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
   } catch (error) {
+    console.error('An unexpected error occurred:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
