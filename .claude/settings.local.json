@@ -10,7 +10,12 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm uninstall:*)",
       "Bash(del srclibutils.ts)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npx supabase db execute:*)",
+      "Bash(node test-supabase.js:*)",
+      "Bash(node:*)",
+      "Bash(npx supabase functions deploy trigger-rebuild)",
+      "Bash(npx supabase:*)"
     ]
   }
 }
