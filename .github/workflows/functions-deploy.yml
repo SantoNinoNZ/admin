@@ -13,9 +13,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # The user must set this secret in GitHub repository settings
-      # Settings > Secrets and variables > Actions > New repository secret
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
 
     steps:
       - name: Checkout repository
@@ -28,7 +27,6 @@ jobs:
 
       - name: Deploy Supabase functions
         run: |
-          # The config.toml file must contain your project_id
           # This script loops through each function directory in supabase/functions
           # and deploys it. It ignores the _shared directory.
           for F in supabase/functions/*; do
@@ -36,7 +34,7 @@ jobs:
               FUNCTION_NAME=$(basename "$F")
               if [ "$FUNCTION_NAME" != "_shared" ]; then
                 echo "Deploying function: $FUNCTION_NAME"
-                supabase functions deploy "$FUNCTION_NAME"
+                supabase functions deploy "$FUNCTION_NAME" --project-ref "$SUPABASE_PROJECT_ID"
               fi
             fi
           done
