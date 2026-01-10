@@ -145,16 +145,15 @@ export class SupabaseAPI {
 
     if (!existingAuthor) {
       // Try to create author record
-      // This will work if the trigger exists or if INSERT policy is added
+      // Note: Using 'any' type cast because database.types.ts is outdated
+      // TODO: Regenerate types with: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/database.types.ts
       const { error } = await supabase
         .from('authors')
         .insert({
           id: user.id,
-          email: user.email,
-          full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User',
           avatar_url: user.user_metadata?.avatar_url || null,
-          role: 'author'
-        })
+        } as any)
 
       // If insert fails due to RLS or duplicate, that's okay
       // The post will still be created with author_id, and trigger will handle it later
