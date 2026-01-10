@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabaseAPI } from '@/lib/supabase-api'
-import type { PostWithDetails, PostFormData } from '@/types'
+import type { PostWithDetails, PostFormData, User } from '@/types'
 import { PostEditor } from './PostEditor'
 import { PostList } from './PostList'
+import { UserList } from './UserList'
 import {
   Layout,
   Menu,
@@ -23,6 +24,7 @@ import {
   UserOutlined,
   LeftOutlined,
   RightOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import { notification } from 'antd'
 
@@ -36,14 +38,17 @@ interface DashboardProps {
 
 export function Dashboard({ session, onLogout }: DashboardProps) {
   const [posts, setPosts] = useState<PostWithDetails[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedPost, setSelectedPost] = useState<PostFormData | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState(false)
+  const [selectedMenu, setSelectedMenu] = useState('posts')
 
   useEffect(() => {
     loadPosts()
+    loadUsers()
   }, [])
 
   const loadPosts = async () => {
@@ -57,6 +62,21 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       setPosts(postsData)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load posts'
+      setError(message)
+      notification.error({ message: 'Error', description: message });
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const usersData = await supabaseAPI.getUsers()
+      setUsers(usersData)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load users'
       setError(message)
       notification.error({ message: 'Error', description: message });
     } finally {
@@ -162,11 +182,20 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     if (loading) {
       return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
     }
-    if (error && posts.length === 0) {
+    if (error && posts.length === 0 && users.length === 0) {
       return <Alert message="Error" description={error} type="error" showIcon closable />;
     }
     if (selectedPost) {
       return <PostEditor post={selectedPost} isNew={isCreating} onSave={handleSavePost} onCancel={handleCancel} />;
+    }
+    if (selectedMenu === 'users') {
+      return (
+        <>
+          <Title level={2}>Users</Title>
+          <p className="mb-4 text-gray-500">Manage your users ({users.length} total)</p>
+          <UserList users={users} />
+        </>
+      );
     }
     return (
       <>
@@ -214,9 +243,16 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
           style={{ borderRight: 0 }}
           items={[
             {
-              key: '1',
+              key: 'posts',
               icon: <EditOutlined />,
               label: 'Posts',
+              onClick: () => setSelectedMenu('posts'),
+            },
+            {
+              key: 'users',
+              icon: <TeamOutlined />,
+              label: 'Users',
+              onClick: () => setSelectedMenu('users'),
             },
             {
               key: '2',
@@ -259,10 +295,10 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         }}>
           <div>
             <Title level={4} style={{ margin: 0 }}>
-              {selectedPost ? (isCreating ? 'Create Post' : 'Edit Post') : 'Posts'}
+              {selectedPost ? (isCreating ? 'Create Post' : 'Edit Post') : (selectedMenu === 'posts' ? 'Posts' : 'Users')}
             </Title>
           </div>
-          {!selectedPost && (
+          {selectedMenu === 'posts' && !selectedPost && (
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateNew}>
               New Post
             </Button>

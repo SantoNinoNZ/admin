@@ -1,0 +1,42 @@
+# .github/workflows/functions-deploy.yml
+name: 'Supabase Functions Deploy'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/functions/**'
+
+jobs:
+  deploy-functions:
+    runs-on: ubuntu-latest
+
+    env:
+      # The user must set this secret in GitHub repository settings
+      # Settings > Secrets and variables > Actions > New repository secret
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Supabase functions
+        run: |
+          # The config.toml file must contain your project_id
+          # This script loops through each function directory in supabase/functions
+          # and deploys it. It ignores the _shared directory.
+          for F in supabase/functions/*; do
+            if [ -d "$F" ]; then
+              FUNCTION_NAME=$(basename "$F")
+              if [ "$FUNCTION_NAME" != "_shared" ]; then
+                echo "Deploying function: $FUNCTION_NAME"
+                supabase functions deploy "$FUNCTION_NAME"
+              fi
+            fi
+          done

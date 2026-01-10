@@ -6,9 +6,30 @@
  */
 
 import { supabase } from './supabase'
-import type { Post, PostWithDetails, PostInsert, PostUpdate, Category, Tag } from '@/types'
+import type { Post, PostWithDetails, PostInsert, PostUpdate, Category, Tag, User } from '@/types'
 
 export class SupabaseAPI {
+
+  // ============================================================================
+  // USERS
+  // ============================================================================
+
+  /**
+   * Get all users
+   */
+  async getUsers(): Promise<User[]> {
+    const { data, error } = await supabase.functions.invoke('get-users')
+
+    if (error) {
+      throw new Error(`Failed to fetch users: ${error.message}`)
+    }
+
+    if (data.error) {
+      throw new Error(`Failed to fetch users: ${data.error}`)
+    }
+
+    return data.users || []
+  }
 
   // ============================================================================
   // POSTS
