@@ -18,7 +18,17 @@ export class SupabaseAPI {
    * Get all users
    */
   async getUsers(): Promise<User[]> {
-    const { data, error } = await supabase.functions.invoke('get-users')
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase.functions.invoke('get-users', {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      }
+    });
 
     if (error) {
       throw new Error(`Failed to fetch users: ${error.message}`)
