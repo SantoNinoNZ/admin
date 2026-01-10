@@ -40,7 +40,49 @@ export interface PostFormData {
   metaDescription?: string
   metaKeywords?: string[]
   ogImage?: string
+  // Source tracking
+  source?: 'database' | 'static'
+  // For static files only
+  fileName?: string
+  fileSha?: string
 }
+
+/**
+ * Static post from markdown file
+ * Used for listing static posts alongside database posts
+ */
+export interface StaticPost {
+  id: string // Use filename as ID
+  slug: string
+  title: string
+  excerpt?: string
+  content: string
+  image_url?: string
+  published: boolean
+  published_at?: string
+  created_at: string
+  updated_at: string
+  // Static file specific
+  source: 'static'
+  fileName: string
+  fileSha: string
+  // These will be null for static posts
+  author_id: null
+  author_name: null
+  author_avatar_url: null
+  category_id: null
+  category_name: null
+  tags: null
+  meta_description: null
+  meta_keywords: null
+  meta_title: null
+  og_image: null
+}
+
+/**
+ * Union type for posts from both sources
+ */
+export type UnifiedPost = PostWithDetails | StaticPost
 
 // ============================================================================
 // Re-export database types for convenience

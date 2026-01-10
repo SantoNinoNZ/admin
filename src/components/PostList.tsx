@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { PostWithDetails } from '@/types'
+import type { UnifiedPost, StaticPost } from '@/types'
 import { List, Button, Modal, Tag, Space, Typography, Empty, Avatar } from 'antd'
 import {
   EditOutlined,
@@ -10,20 +10,22 @@ import {
   FolderOutlined,
   TagOutlined,
   UserOutlined,
+  FileMarkdownOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons'
 
 const { Text, Paragraph } = Typography
 
 interface PostListProps {
-  posts: PostWithDetails[]
-  onEdit: (post: PostWithDetails) => void
-  onDelete: (post: PostWithDetails) => void
+  posts: UnifiedPost[]
+  onEdit: (post: UnifiedPost) => void
+  onDelete: (post: UnifiedPost) => void
 }
 
 export function PostList({ posts, onEdit, onDelete }: PostListProps) {
-  const [postToDelete, setPostToDelete] = useState<PostWithDetails | null>(null)
+  const [postToDelete, setPostToDelete] = useState<UnifiedPost | null>(null)
 
-  const showDeleteModal = (post: PostWithDetails) => {
+  const showDeleteModal = (post: UnifiedPost) => {
     setPostToDelete(post)
   }
 
@@ -92,6 +94,15 @@ export function PostList({ posts, onEdit, onDelete }: PostListProps) {
               <Tag color={post.published ? 'green' : 'orange'}>
                 {post.published ? 'Published' : 'Draft'}
               </Tag>
+              {'source' in post && post.source === 'static' ? (
+                <Tag icon={<FileMarkdownOutlined />} color="blue">
+                  Static File
+                </Tag>
+              ) : (
+                <Tag icon={<DatabaseOutlined />} color="purple">
+                  Database
+                </Tag>
+              )}
               {Array.isArray(post.tags) && post.tags.map((tag: any) => (
                 <Tag icon={<TagOutlined />} key={tag.id}>{tag.name}</Tag>
               ))}

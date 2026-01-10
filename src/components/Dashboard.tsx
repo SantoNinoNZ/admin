@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabaseAPI } from '@/lib/supabase-api'
-import type { PostWithDetails, PostFormData, User } from '@/types'
+import { StaticPostsService } from '@/lib/static-posts-service'
+import type { PostWithDetails, PostFormData, User, UnifiedPost, StaticPost } from '@/types'
 import { PostEditor } from './PostEditor'
 import { PostList } from './PostList'
 import { UserList } from './UserList'
@@ -37,9 +38,10 @@ interface DashboardProps {
 }
 
 export function Dashboard({ session, onLogout }: DashboardProps) {
-  const [posts, setPosts] = useState<PostWithDetails[]>([])
+  const [posts, setPosts] = useState<UnifiedPost[]>([])
   const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loadingPosts, setLoadingPosts] = useState(true)
+  const [loadingUsers, setLoadingUsers] = useState(false)
   const [selectedPost, setSelectedPost] = useState<PostFormData | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
@@ -48,39 +50,53 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
 
   useEffect(() => {
     loadPosts()
-    loadUsers()
+    // Temporarily disabled - causing errors
+    // loadUsers()
   }, [])
 
   const loadPosts = async () => {
     try {
-      setLoading(true)
+      setLoadingPosts(true)
       setError('')
-      const postsData = await supabaseAPI.getPosts({
-        orderBy: 'updated_at',
-        orderDirection: 'desc'
+
+      // Fetch both database and static posts in parallel
+      const [databasePosts, staticPosts] = await Promise.all([
+        supabaseAPI.getPosts({
+          orderBy: 'updated_at',
+          orderDirection: 'desc'
+        }),
+        StaticPostsService.getAllStaticPosts()
+      ])
+
+      // Combine and sort by date
+      const allPosts = [...databasePosts, ...staticPosts].sort((a, b) => {
+        const dateA = new Date(a.updated_at || a.created_at).getTime()
+        const dateB = new Date(b.updated_at || b.created_at).getTime()
+        return dateB - dateA
       })
-      setPosts(postsData)
+
+      setPosts(allPosts)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load posts'
       setError(message)
-      notification.error({ message: 'Error', description: message });
+      notification.error({ title: 'Error', description: message });
     } finally {
-      setLoading(false)
+      setLoadingPosts(false)
     }
   }
 
   const loadUsers = async () => {
     try {
-      setLoading(true)
+      setLoadingUsers(true)
       setError('')
       const usersData = await supabaseAPI.getUsers()
       setUsers(usersData)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load users'
       setError(message)
-      notification.error({ message: 'Error', description: message });
+      notification.error({ title: 'Error', description: message });
     } finally {
-      setLoading(false)
+      setLoadingUsers(false)
     }
   }
 
@@ -99,7 +115,9 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     setIsCreating(true)
   }
 
-  const handleEditPost = (post: PostWithDetails) => {
+  const handleEditPost = (post: UnifiedPost) => {
+    const isStatic = 'source' in post && post.source === 'static'
+
     const formData: PostFormData = {
       id: post.id,
       slug: post.slug,
@@ -114,7 +132,10 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
       metaTitle: post.meta_title || '',
       metaDescription: post.meta_description || '',
       metaKeywords: post.meta_keywords || [],
-      ogImage: post.og_image || ''
+      ogImage: post.og_image || '',
+      source: isStatic ? 'static' : 'database',
+      fileName: isStatic ? (post as StaticPost).fileName : undefined,
+      fileSha: isStatic ? (post as StaticPost).fileSha : undefined,
     }
     setSelectedPost(formData)
     setIsCreating(false)
@@ -122,26 +143,42 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
 
   const handleSavePost = async (postData: PostFormData) => {
     try {
-      const payload = {
-        slug: postData.slug,
-        title: postData.title,
-        excerpt: postData.excerpt || null,
-        content: postData.content,
-        image_url: postData.imageUrl || null,
-        published: postData.published || false,
-        category_id: postData.categoryId || null,
-        meta_title: postData.metaTitle || null,
-        meta_description: postData.metaDescription || null,
-        meta_keywords: postData.metaKeywords || null,
-        og_image: postData.ogImage || null,
-      };
+      // Handle static posts differently
+      if (postData.source === 'static' && postData.fileName && postData.fileSha) {
+        // Update static post (commit to GitHub)
+        await StaticPostsService.updateStaticPost(
+          postData.fileName,
+          postData.fileSha,
+          postData
+        );
+        notification.success({
+          message: 'Success',
+          description: 'Static post updated and committed to GitHub!',
+          duration: 5,
+        });
+      } else {
+        // Handle database posts
+        const payload = {
+          slug: postData.slug,
+          title: postData.title,
+          excerpt: postData.excerpt || null,
+          content: postData.content,
+          image_url: postData.imageUrl || null,
+          published: postData.published || false,
+          category_id: postData.categoryId || null,
+          meta_title: postData.metaTitle || null,
+          meta_description: postData.metaDescription || null,
+          meta_keywords: postData.metaKeywords || null,
+          og_image: postData.ogImage || null,
+        };
 
-      if (isCreating) {
-        await supabaseAPI.createPost(payload, postData.tagIds);
-        notification.success({ message: 'Success', description: 'Post created successfully!' });
-      } else if (postData.id) {
-        await supabaseAPI.updatePost(postData.id, payload, postData.tagIds);
-        notification.success({ message: 'Success', description: 'Post updated successfully!' });
+        if (isCreating) {
+          await supabaseAPI.createPost(payload, postData.tagIds);
+          notification.success({ title: 'Success', description: 'Post created successfully!' });
+        } else if (postData.id) {
+          await supabaseAPI.updatePost(postData.id, payload, postData.tagIds);
+          notification.success({ title: 'Success', description: 'Post updated successfully!' });
+        }
       }
 
       await loadPosts()
@@ -150,20 +187,39 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save post'
       setError(message)
-      notification.error({ message: 'Error', description: message });
+      notification.error({ title: 'Error', description: message });
       throw err
     }
   }
 
-  const handleDeletePost = async (post: PostWithDetails) => {
+  const handleDeletePost = async (post: UnifiedPost) => {
     try {
-      await supabaseAPI.deletePost(post.id)
+      const isStatic = 'source' in post && post.source === 'static'
+
+      if (isStatic) {
+        // Delete static post (commit to GitHub)
+        const staticPost = post as StaticPost
+        await StaticPostsService.deleteStaticPost(
+          staticPost.fileName,
+          staticPost.fileSha,
+          staticPost.title
+        );
+        notification.success({
+          message: 'Success',
+          description: 'Static post deleted and committed to GitHub!',
+          duration: 5,
+        });
+      } else {
+        // Delete database post
+        await supabaseAPI.deletePost(post.id)
+        notification.success({ title: 'Success', description: 'Post deleted successfully!' });
+      }
+
       await loadPosts()
-      notification.success({ message: 'Success', description: 'Post deleted successfully!' });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete post'
       setError(message)
-      notification.error({ message: 'Error', description: message });
+      notification.error({ title: 'Error', description: message });
     }
   }
 
@@ -179,11 +235,16 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
   }
 
   const renderContent = () => {
-    if (loading) {
+    // Show loading spinner based on selected menu
+    if (selectedMenu === 'posts' && loadingPosts) {
       return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
     }
+    if (selectedMenu === 'users' && loadingUsers) {
+      return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
+    }
+
     if (error && posts.length === 0 && users.length === 0) {
-      return <Alert message="Error" description={error} type="error" showIcon closable />;
+      return <Alert title="Error" description={error} type="error" showIcon closable />;
     }
     if (selectedPost) {
       return <PostEditor post={selectedPost} isNew={isCreating} onSave={handleSavePost} onCancel={handleCancel} />;

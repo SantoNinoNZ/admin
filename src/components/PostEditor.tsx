@@ -63,25 +63,26 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const isStaticPost = post.source === 'static'
 
   const handleImageUpload = async (file: File): Promise<string> => {
     try {
       setUploading(true)
       notification.info({
-        message: 'Uploading...',
+        title: 'Uploading...',
         description: `Uploading ${file.name}...`,
         duration: 2,
       })
       const imageUrl = await supabaseAPI.uploadImage(file, 'images')
       notification.success({
-        message: 'Image Uploaded Successfully!',
+        title: 'Image Uploaded Successfully!',
         description: 'The image has been inserted into your content.',
         duration: 4,
       })
       return imageUrl
     } catch (err) {
       notification.error({
-        message: 'Upload Failed',
+        title: 'Upload Failed',
         description: err instanceof Error ? err.message : 'Failed to upload image'
       })
       throw err
@@ -91,6 +92,7 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
   }
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: {
@@ -272,7 +274,16 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
           </Space>
         </div>
 
-        {error && <Alert message={error} type="error" showIcon closable />}
+        {error && <Alert title={error} type="error" showIcon closable />}
+
+        {isStaticPost && (
+          <Alert
+            title="Editing Static Post"
+            description="This post is stored as a markdown file in GitHub. Changes will be committed directly to the repository. Categories, tags, and SEO fields are not available for static posts."
+            type="info"
+            showIcon
+          />
+        )}
 
         <Card title="Post Details">
           <Row gutter={24}>
@@ -288,7 +299,7 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
             </Col>
             <Col span={12}>
               <Form.Item name="categoryId" label="Category">
-                <Select placeholder="Select a category" allowClear>
+                <Select placeholder="Select a category" allowClear disabled={isStaticPost}>
                   {categories.map(cat => <Select.Option key={cat.id} value={cat.id}>{cat.name}</Select.Option>)}
                 </Select>
               </Form.Item>
@@ -303,37 +314,40 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
                 <TextArea rows={2} placeholder="Brief description of the post" />
               </Form.Item>
             </Col>
-             <Col span={24}>
-                <Form.Item name="tags" label="Tags">
-                    <Space size={[0, 8]} wrap>
-                        {tags.map((tag) => (
-                            <CheckableTag
-                                key={tag.id}
-                                checked={form.getFieldValue('tags')?.includes(tag.id)}
-                                onChange={(checked) => {
-                                    const currentTags = form.getFieldValue('tags') || [];
-                                    const nextTags = checked
-                                        ? [...currentTags, tag.id]
-                                        : currentTags.filter((t: string) => t !== tag.id);
-                                    form.setFieldsValue({ tags: nextTags });
-                                }}
-                            >
-                                {tag.name}
-                            </CheckableTag>
-                        ))}
-                    </Space>
-                </Form.Item>
-            </Col>
+             {!isStaticPost && (
+               <Col span={24}>
+                  <Form.Item name="tags" label="Tags">
+                      <Space size={[0, 8]} wrap>
+                          {tags.map((tag) => (
+                              <CheckableTag
+                                  key={tag.id}
+                                  checked={form.getFieldValue('tags')?.includes(tag.id)}
+                                  onChange={(checked) => {
+                                      const currentTags = form.getFieldValue('tags') || [];
+                                      const nextTags = checked
+                                          ? [...currentTags, tag.id]
+                                          : currentTags.filter((t: string) => t !== tag.id);
+                                      form.setFieldsValue({ tags: nextTags });
+                                  }}
+                              >
+                                  {tag.name}
+                              </CheckableTag>
+                          ))}
+                      </Space>
+                  </Form.Item>
+              </Col>
+             )}
           </Row>
         </Card>
 
-        <Collapse
-          expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
-          items={[
-            {
-              key: '1',
-              label: 'SEO Metadata',
-              children: (
+        {!isStaticPost && (
+          <Collapse
+            expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+            items={[
+              {
+                key: '1',
+                label: 'SEO Metadata',
+                children: (
                 <Row gutter={24}>
                   <Col span={12}>
                     <Form.Item name="metaTitle" label="Meta Title">
@@ -355,6 +369,7 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
             },
           ]}
         />
+        )}
 
         <Card title="Content">
           {editor && (

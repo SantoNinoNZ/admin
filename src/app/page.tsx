@@ -6,7 +6,7 @@ import { Dashboard } from '@/components/Dashboard'
 import { GoogleAuthComponent } from '@/components/GoogleAuth'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
-import { Spin } from 'antd'
+import { Spin, App } from 'antd'
 
 export default function AdminPage() {
   const [session, setSession] = useState<Session | null>(null)
@@ -46,12 +46,18 @@ export default function AdminPage() {
   }
 
   if (!session) {
-    return <GoogleAuthComponent />
+    return (
+      <App>
+        <GoogleAuthComponent />
+      </App>
+    )
   }
 
   return (
-    <main className="min-h-screen">
-      <Dashboard session={session} onLogout={handleLogout} />
-    </main>
+    <App>
+      <main className="min-h-screen">
+        <Dashboard session={session} onLogout={handleLogout} />
+      </main>
+    </App>
   )
 }
