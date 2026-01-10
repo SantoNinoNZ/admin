@@ -1,14 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import dynamic from 'next/dynamic'
+import { useState, useEffect } from 'react'
 import {
   Form,
   Input,
   Button,
   Select,
   Switch,
-  Upload,
   Card,
   Space,
   Typography,
@@ -21,19 +19,41 @@ import {
 import {
   SaveOutlined,
   CloseCircleOutlined,
-  UploadOutlined,
   CaretRightOutlined,
   ArrowLeftOutlined,
+  BoldOutlined,
+  ItalicOutlined,
+  UnorderedListOutlined,
+  OrderedListOutlined,
+  LinkOutlined,
+  PictureOutlined,
 } from '@ant-design/icons'
 import type { PostFormData, Category, Tag as TagType } from '@/types'
 import { supabaseAPI } from '@/lib/supabase-api'
 import { notification } from 'antd'
-import 'easymde/dist/easymde.min.css'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import Image from '@tiptap/extension-image'
+import Link from '@tiptap/extension-link'
+import Placeholder from '@tiptap/extension-placeholder'
+import TurndownService from 'turndown'
+import { marked } from 'marked'
 
-const SimpleMDE = dynamic(() => import('react-simplemde-editor'), { ssr: false })
 const { TextArea } = Input
 const { Title } = Typography
 const { CheckableTag } = Tag
+
+// Initialize converters
+const turndownService = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+})
+
+// Configure marked to not add paragraph tags around images
+marked.use({
+  mangle: false,
+  headerIds: false,
+})
 
 interface PostEditorProps {
   post: PostFormData
@@ -49,7 +69,6 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
-  const [content, setContent] = useState(post.content || '')
 
   const handleImageUpload = async (file: File): Promise<string> => {
     try {
@@ -77,133 +96,86 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
     }
   }
 
-  const simpleMdeOptions = useMemo(() => {
-    return {
-      spellChecker: false,
-      placeholder: 'Write your post content in Markdown... (You can paste or drag images directly)',
-      status: uploading ? ['Uploading image...'] : false,
-      toolbar: [
-        'bold', 'italic', 'heading', '|',
-        'quote', 'unordered-list', 'ordered-list', '|',
-        'link',
-        {
-          name: 'image',
-          action: async (editor: any) => {
-            const input = document.createElement('input')
-            input.type = 'file'
-            input.accept = 'image/*'
-            input.onchange = async (e: any) => {
-              const file = e.target.files?.[0]
-              if (file) {
-                try {
-                  const url = await handleImageUpload(file)
-                  const cm = editor.codemirror
-                  const startPoint = cm.getCursor('start')
-
-                  // Insert image markdown with alt text placeholder
-                  const imageMarkdown = `![Image description](${url})`
-                  cm.replaceSelection(imageMarkdown)
-
-                  // Position cursor in the alt text area for easy editing
-                  const newCursorPos = {
-                    line: startPoint.line,
-                    ch: startPoint.ch + 2  // Position after ![
-                  }
-                  cm.setCursor(newCursorPos)
-
-                  // Select the "Image description" text so user can immediately type
-                  cm.setSelection(
-                    { line: startPoint.line, ch: startPoint.ch + 2 },
-                    { line: startPoint.line, ch: startPoint.ch + 2 + 17 } // Length of "Image description"
-                  )
-
-                  cm.focus()
-                } catch (err) {
-                  console.error('Image upload failed:', err)
-                }
-              }
-            }
-            input.click()
-          },
-          className: 'fa fa-picture-o',
-          title: 'Insert Image (Upload)',
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
         },
-        '|',
-        'preview', 'side-by-side', 'fullscreen', '|',
-        'guide'
-      ] as const,
-    }
-  }, [uploading])
+      }),
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          target: '_blank',
+        },
+      }),
+      Placeholder.configure({
+        placeholder: 'Write your post content here... You can paste images directly!',
+      }),
+    ],
+    content: post.content ? marked(post.content) as string : '',
+    editorProps: {
+      attributes: {
+        class: 'tiptap',
+      },
+      handlePaste: (view, event) => {
+        const items = event.clipboardData?.items
+        if (!items) return false
+
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+            event.preventDefault()
+            const file = items[i].getAsFile()
+            if (file) {
+              handleImageUpload(file).then((url) => {
+                editor?.chain().focus().setImage({ src: url }).run()
+              })
+            }
+            return true
+          }
+        }
+        return false
+      },
+      handleDrop: (view, event, slice, moved) => {
+        const files = event.dataTransfer?.files
+        if (!files || files.length === 0) return false
+
+        for (let i = 0; i < files.length; i++) {
+          if (files[i].type.indexOf('image') !== -1) {
+            event.preventDefault()
+            handleImageUpload(files[i]).then((url) => {
+              const { schema } = view.state
+              const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY })
+              const node = schema.nodes.image.create({ src: url })
+              const transaction = view.state.tr.insert(coordinates?.pos || 0, node)
+              view.dispatch(transaction)
+            })
+            return true
+          }
+        }
+        return false
+      },
+    },
+  })
 
   useEffect(() => {
     form.setFieldsValue({
       ...post,
       tags: post.tagIds || [],
     })
-    setContent(post.content || '')
+    if (editor && post.content) {
+      // Convert markdown to HTML for the editor
+      const htmlContent = marked(post.content) as string
+      if (htmlContent !== editor.getHTML()) {
+        editor.commands.setContent(htmlContent)
+      }
+    }
     loadCategoriesAndTags()
-  }, [post, form])
-
-  // Add paste and drop handlers for images
-  useEffect(() => {
-    const handlePaste = async (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items
-      if (!items) return
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          e.preventDefault()
-          const file = items[i].getAsFile()
-          if (file) {
-            try {
-              const url = await handleImageUpload(file)
-              // Insert at current cursor position with placeholder text
-              setContent(prev => {
-                const imageMarkdown = `\n![Image description](${url})\n`
-                return prev + imageMarkdown
-              })
-            } catch (err) {
-              console.error('Paste upload failed:', err)
-            }
-          }
-        }
-      }
-    }
-
-    const handleDrop = async (e: DragEvent) => {
-      const files = e.dataTransfer?.files
-      if (!files || files.length === 0) return
-
-      for (let i = 0; i < files.length; i++) {
-        if (files[i].type.indexOf('image') !== -1) {
-          e.preventDefault()
-          try {
-            const url = await handleImageUpload(files[i])
-            setContent(prev => {
-              const imageMarkdown = `\n![Image description](${url})\n`
-              return prev + imageMarkdown
-            })
-          } catch (err) {
-            console.error('Drop upload failed:', err)
-          }
-        }
-      }
-    }
-
-    const editor = document.querySelector('.EasyMDEContainer')
-    if (editor) {
-      editor.addEventListener('paste', handlePaste as any)
-      editor.addEventListener('drop', handleDrop as any)
-      editor.addEventListener('dragover', (e) => e.preventDefault())
-    }
-
-    return () => {
-      if (editor) {
-        editor.removeEventListener('paste', handlePaste as any)
-        editor.removeEventListener('drop', handleDrop as any)
-      }
-    }
-  }, [])
+  }, [post, form, editor])
 
   const loadCategoriesAndTags = async () => {
     try {
@@ -221,10 +193,14 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
   const handleFinish = async (values: any) => {
     setError('')
 
-    if (!content || content.trim() === '') {
+    const htmlContent = editor?.getHTML() || ''
+    if (!htmlContent || htmlContent.trim() === '' || htmlContent === '<p></p>') {
       setError('Content is required')
       return
     }
+
+    // Convert HTML to Markdown before saving
+    const markdownContent = turndownService.turndown(htmlContent)
 
     const isUnique = await supabaseAPI.isSlugUnique(values.slug, post.id)
     if (!isUnique) {
@@ -237,7 +213,7 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
       const postData: PostFormData = {
         ...post,
         ...values,
-        content,
+        content: markdownContent,
         tagIds: values.tags,
       }
       await onSave(postData)
@@ -387,11 +363,113 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
         />
 
         <Card title="Content">
-          <SimpleMDE
-            value={content}
-            onChange={(value) => setContent(value)}
-            options={simpleMdeOptions}
-          />
+          {editor && (
+            <div style={{ border: '1px solid #d9d9d9', borderRadius: '2px' }}>
+              {/* Toolbar */}
+              <div style={{
+                borderBottom: '1px solid #d9d9d9',
+                padding: '8px',
+                background: '#fafafa',
+                display: 'flex',
+                gap: '4px',
+                flexWrap: 'wrap'
+              }}>
+                <Button
+                  size="small"
+                  icon={<BoldOutlined />}
+                  onClick={() => editor.chain().focus().toggleBold().run()}
+                  type={editor.isActive('bold') ? 'primary' : 'default'}
+                  title="Bold (Ctrl+B)"
+                />
+                <Button
+                  size="small"
+                  icon={<ItalicOutlined />}
+                  onClick={() => editor.chain().focus().toggleItalic().run()}
+                  type={editor.isActive('italic') ? 'primary' : 'default'}
+                  title="Italic (Ctrl+I)"
+                />
+                <div style={{ width: '1px', background: '#d9d9d9', margin: '0 4px' }} />
+                <Button
+                  size="small"
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                  type={editor.isActive('heading', { level: 1 }) ? 'primary' : 'default'}
+                  title="Heading 1"
+                >
+                  H1
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                  type={editor.isActive('heading', { level: 2 }) ? 'primary' : 'default'}
+                  title="Heading 2"
+                >
+                  H2
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+                  type={editor.isActive('heading', { level: 3 }) ? 'primary' : 'default'}
+                  title="Heading 3"
+                >
+                  H3
+                </Button>
+                <div style={{ width: '1px', background: '#d9d9d9', margin: '0 4px' }} />
+                <Button
+                  size="small"
+                  icon={<UnorderedListOutlined />}
+                  onClick={() => editor.chain().focus().toggleBulletList().run()}
+                  type={editor.isActive('bulletList') ? 'primary' : 'default'}
+                  title="Bullet List"
+                />
+                <Button
+                  size="small"
+                  icon={<OrderedListOutlined />}
+                  onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                  type={editor.isActive('orderedList') ? 'primary' : 'default'}
+                  title="Numbered List"
+                />
+                <div style={{ width: '1px', background: '#d9d9d9', margin: '0 4px' }} />
+                <Button
+                  size="small"
+                  icon={<LinkOutlined />}
+                  onClick={() => {
+                    const url = window.prompt('Enter URL:')
+                    if (url) {
+                      editor.chain().focus().setLink({ href: url }).run()
+                    }
+                  }}
+                  type={editor.isActive('link') ? 'primary' : 'default'}
+                  title="Add Link"
+                />
+                <Button
+                  size="small"
+                  icon={<PictureOutlined />}
+                  loading={uploading}
+                  onClick={() => {
+                    const input = document.createElement('input')
+                    input.type = 'file'
+                    input.accept = 'image/*'
+                    input.onchange = async (e: any) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        try {
+                          const url = await handleImageUpload(file)
+                          editor.chain().focus().setImage({ src: url }).run()
+                        } catch (err) {
+                          console.error('Image upload failed:', err)
+                        }
+                      }
+                    }
+                    input.click()
+                  }}
+                  title="Insert Image"
+                />
+              </div>
+
+              {/* Editor */}
+              <EditorContent editor={editor} />
+            </div>
+          )}
         </Card>
 
       </Space>
