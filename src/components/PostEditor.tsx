@@ -49,12 +49,6 @@ const turndownService = new TurndownService({
   codeBlockStyle: 'fenced',
 })
 
-// Configure marked to not add paragraph tags around images
-marked.use({
-  mangle: false,
-  headerIds: false,
-})
-
 interface PostEditorProps {
   post: PostFormData
   isNew: boolean

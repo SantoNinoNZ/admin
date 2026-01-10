@@ -9,7 +9,8 @@
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm uninstall:*)",
-      "Bash(del srclibutils.ts)"
+      "Bash(del srclibutils.ts)",
+      "Bash(npm run build:*)"
     ]
   }
 }
