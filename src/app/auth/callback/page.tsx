@@ -23,23 +23,23 @@ export default function AuthCallback() {
         if (error) {
           console.error('Error getting session:', error)
           setStatus(`Error: ${error.message}`)
-          setTimeout(() => router.push('/admin'), 2000)
+          setTimeout(() => router.push('/'), 2000)
           return
         }
 
         if (data.session) {
           console.log('✓ Session established:', data.session.user.email)
           setStatus('Success! Redirecting to dashboard...')
-          setTimeout(() => router.push('/admin'), 500)
+          setTimeout(() => router.push('/'), 500)
         } else {
           console.log('⚠ No session found, redirecting to login')
           setStatus('No session found, redirecting...')
-          setTimeout(() => router.push('/admin'), 1000)
+          setTimeout(() => router.push('/'), 1000)
         }
       } catch (err) {
         console.error('Callback error:', err)
         setStatus(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`)
-        setTimeout(() => router.push('/admin'), 2000)
+        setTimeout(() => router.push('/'), 2000)
       }
     }
 
