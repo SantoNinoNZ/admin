@@ -25,31 +25,73 @@ export class SupabaseAPI {
     }
 
     try {
+      console.log('Invoking get-users edge function...');
+
       const { data, error } = await supabase.functions.invoke('get-users', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
-        }
+        },
+        body: {}  // Explicitly set empty body for POST request
       });
 
+      console.log('Edge function response:', { data, error });
+
       if (error) {
-        // More specific error message
-        if (error.message?.includes('Failed to send')) {
-          throw new Error('Edge function not available. Please ensure migrations are run and function is deployed.')
+        console.error('Edge function error:', error);
+
+        // More specific error messages
+        if (error.message?.includes('Failed to send') || error.message?.includes('CORS')) {
+          console.warn('CORS/Network error, falling back to direct database query');
+          // Fallback: Query users table directly (limited info)
+          return await this.getUsersFromDB();
+        }
+        if (error.message?.includes('FunctionsRelayError')) {
+          throw new Error('Edge function unavailable. Please check Supabase dashboard for function status.')
         }
         throw new Error(`Failed to fetch users: ${error.message}`)
       }
 
       if (data?.error) {
+        console.error('Edge function returned error:', data.error);
         throw new Error(`Failed to fetch users: ${data.error}`)
       }
 
+      console.log(`Successfully retrieved ${data?.users?.length || 0} users`);
       return data?.users || []
     } catch (err) {
-      // Handle network or other errors
-      if (err instanceof Error) {
-        throw err
+      console.error('Exception in getUsers:', err);
+      // Fallback to direct query
+      console.warn('Attempting fallback to direct database query...');
+      return await this.getUsersFromDB();
+    }
+  }
+
+  /**
+   * Fallback: Get users from database directly (limited info)
+   * This only shows users who have a record in the users table
+   */
+  private async getUsersFromDB(): Promise<User[]> {
+    try {
+      // users table defined in migration 006
+      const { data, error } = await supabase
+        .from('users' as any)
+        .select('*');
+
+      if (error) {
+        console.error('Direct DB query failed:', error);
+        throw new Error('Unable to fetch users. Please ensure migrations are run.');
       }
-      throw new Error('Failed to connect to user service')
+
+      return (data || []).map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        created_at: user.created_at,
+        is_admin: user.is_admin,
+        invited_by: user.invited_by,
+      }));
+    } catch (err) {
+      console.error('Fallback query failed:', err);
+      throw new Error('Unable to fetch users. Edge function and database query both failed.');
     }
   }
 
