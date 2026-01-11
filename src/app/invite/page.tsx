@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { supabaseAPI } from '@/lib/supabase-api'
@@ -11,7 +11,7 @@ import type { Session } from '@supabase/supabase-js'
 
 const { Title, Paragraph } = Typography
 
-export default function InvitePage() {
+function InviteContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get('token')
@@ -206,4 +206,27 @@ export default function InvitePage() {
   }
 
   return null
+}
+
+export default function InvitePage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: '#f0f2f5'
+      }}>
+        <Card style={{ maxWidth: 500, width: '100%', margin: 16 }}>
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <Spin size="large" />
+            <Paragraph style={{ marginTop: 16 }}>Loading invite...</Paragraph>
+          </div>
+        </Card>
+      </div>
+    }>
+      <InviteContent />
+    </Suspense>
+  )
 }

@@ -51,7 +51,8 @@ export class SupabaseAPI {
       return false;
     }
 
-    // @ts-ignore - RPC function defined in migration
+    // RPC function defined in migration
+    // @ts-ignore
     const { data, error } = await supabase.rpc('is_authorized_admin', {
       user_id: user.id
     });
@@ -74,8 +75,8 @@ export class SupabaseAPI {
       throw new Error('User not authenticated');
     }
 
-    // Generate token
-    // @ts-ignore - RPC function defined in migration
+    // Generate token (RPC function defined in migration)
+    // @ts-ignore
     const { data: tokenData, error: tokenError } = await supabase.rpc('generate_invite_token');
 
     if (tokenError) {
@@ -86,10 +87,9 @@ export class SupabaseAPI {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-    // Create invite
-    // @ts-ignore - invites table defined in migration
+    // Create invite (invites table defined in migration)
     const { data, error } = await supabase
-      .from('invites')
+      .from('invites' as any)
       .insert({
         email,
         token,
@@ -104,8 +104,8 @@ export class SupabaseAPI {
     }
 
     return {
-      token: data.token,
-      expiresAt: data.expires_at,
+      token: (data as any).token,
+      expiresAt: (data as any).expires_at,
     };
   }
 
@@ -113,9 +113,9 @@ export class SupabaseAPI {
    * Get all invites
    */
   async getInvites(): Promise<any[]> {
-    // @ts-ignore - invites table defined in migration
+    // invites table defined in migration
     const { data, error } = await supabase
-      .from('invites')
+      .from('invites' as any)
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -136,7 +136,8 @@ export class SupabaseAPI {
       throw new Error('User not authenticated');
     }
 
-    // @ts-ignore - RPC function defined in migration
+    // RPC function defined in migration
+    // @ts-ignore
     const { data, error } = await supabase.rpc('consume_invite', {
       invite_token: token,
       user_id: user.id
@@ -153,9 +154,9 @@ export class SupabaseAPI {
    * Validate an invite token (without consuming)
    */
   async validateInvite(token: string): Promise<{ valid: boolean; email?: string }> {
-    // @ts-ignore - invites table defined in migration
+    // invites table defined in migration
     const { data, error } = await supabase
-      .from('invites')
+      .from('invites' as any)
       .select('email, expires_at, used_at')
       .eq('token', token)
       .single();
@@ -164,11 +165,11 @@ export class SupabaseAPI {
       return { valid: false };
     }
 
-    const isValid = !data.used_at && new Date(data.expires_at) > new Date();
+    const isValid = !(data as any).used_at && new Date((data as any).expires_at) > new Date();
 
     return {
       valid: isValid,
-      email: isValid ? data.email : undefined,
+      email: isValid ? (data as any).email : undefined,
     };
   }
 
@@ -187,9 +188,9 @@ export class SupabaseAPI {
       throw new Error('Cannot revoke your own admin access');
     }
 
-    // @ts-ignore - is_admin field defined in migration
+    // is_admin field defined in migration
     const { error } = await supabase
-      .from('users')
+      .from('users' as any)
       .update({ is_admin: false })
       .eq('id', userId);
 
@@ -202,9 +203,9 @@ export class SupabaseAPI {
    * Grant admin access to a user
    */
   async grantAdminAccess(userId: string): Promise<void> {
-    // @ts-ignore - is_admin field defined in migration
+    // is_admin field defined in migration
     const { error } = await supabase
-      .from('users')
+      .from('users' as any)
       .update({ is_admin: true })
       .eq('id', userId);
 
