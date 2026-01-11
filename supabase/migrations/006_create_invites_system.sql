@@ -105,41 +105,38 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 6. Create function to check if user is authorized admin
+-- Uses SECURITY DEFINER to bypass RLS and avoid infinite recursion
 CREATE OR REPLACE FUNCTION is_authorized_admin(user_id UUID)
 RETURNS BOOLEAN AS $$
+DECLARE
+  is_admin_result BOOLEAN;
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM users
-    WHERE id = user_id AND is_admin = TRUE
-  );
+  -- Directly query users table bypassing RLS
+  SELECT u.is_admin INTO is_admin_result
+  FROM public.users u
+  WHERE u.id = user_id;
+
+  RETURN COALESCE(is_admin_result, FALSE);
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- 7. Enable RLS on invites table
 ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
 
 -- 8. Create RLS policies for invites
 -- Allow authenticated admins to view all invites
+-- Uses helper function to avoid infinite recursion
 CREATE POLICY "Admins can view invites"
   ON invites FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid() AND users.is_admin = TRUE
-    )
-  );
+  USING (is_authorized_admin(auth.uid()));
 
 -- Allow authenticated admins to create invites
+-- Uses helper function to avoid infinite recursion
 CREATE POLICY "Admins can create invites"
   ON invites FOR INSERT
   TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE users.id = auth.uid() AND users.is_admin = TRUE
-    )
-  );
+  WITH CHECK (is_authorized_admin(auth.uid()));
 
 -- Allow public to view their own invite by token (for validation)
 CREATE POLICY "Public can view invite by token"
@@ -147,37 +144,37 @@ CREATE POLICY "Public can view invite by token"
   TO anon, authenticated
   USING (TRUE);
 
+-- Allow function to update invite when consumed (SECURITY DEFINER functions bypass RLS)
+CREATE POLICY "Allow invite consumption"
+  ON invites FOR UPDATE
+  TO authenticated
+  USING (TRUE)
+  WITH CHECK (TRUE);
+
 -- 9. Add RLS policies for users table updates
 -- Enable RLS on users table if not already enabled
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 -- Allow admins to update other users' admin status
+-- Uses helper function to avoid infinite recursion
 CREATE POLICY "Admins can update users"
   ON users FOR UPDATE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users AS admin_user
-      WHERE admin_user.id = auth.uid() AND admin_user.is_admin = TRUE
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users AS admin_user
-      WHERE admin_user.id = auth.uid() AND admin_user.is_admin = TRUE
-    )
-  );
+  USING (is_authorized_admin(auth.uid()))
+  WITH CHECK (is_authorized_admin(auth.uid()));
 
 -- Allow admins to view all users
+-- Uses helper function to avoid infinite recursion
 CREATE POLICY "Admins can view all users"
   ON users FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users AS admin_user
-      WHERE admin_user.id = auth.uid() AND admin_user.is_admin = TRUE
-    )
-  );
+  USING (is_authorized_admin(auth.uid()));
+
+-- Allow users to insert their own record during invite consumption
+CREATE POLICY "Users can insert own record"
+  ON users FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = id);
 
 -- 10. Add comments
 COMMENT ON TABLE users IS 'Stores user admin authorization status';
