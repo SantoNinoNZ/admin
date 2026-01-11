@@ -141,14 +141,14 @@ CREATE POLICY "Admins can update users"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM users AS current_user
-      WHERE current_user.id = auth.uid() AND current_user.is_admin = TRUE
+      SELECT 1 FROM users AS admin_user
+      WHERE admin_user.id = auth.uid() AND admin_user.is_admin = TRUE
     )
   )
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM users AS current_user
-      WHERE current_user.id = auth.uid() AND current_user.is_admin = TRUE
+      SELECT 1 FROM users AS admin_user
+      WHERE admin_user.id = auth.uid() AND admin_user.is_admin = TRUE
     )
   );
 
@@ -158,8 +158,8 @@ CREATE POLICY "Admins can view all users"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM users AS current_user
-      WHERE current_user.id = auth.uid() AND current_user.is_admin = TRUE
+      SELECT 1 FROM users AS admin_user
+      WHERE admin_user.id = auth.uid() AND admin_user.is_admin = TRUE
     )
   );
 
