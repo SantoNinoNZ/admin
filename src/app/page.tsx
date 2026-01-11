@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Dashboard } from '@/components/Dashboard'
+import { AdminLayout } from '@/components/AdminLayout'
 import { GoogleAuthComponent } from '@/components/GoogleAuth'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
@@ -56,7 +56,7 @@ export default function AdminPage() {
   return (
     <App>
       <main className="min-h-screen">
-        <Dashboard session={session} onLogout={handleLogout} />
+        <AdminLayout session={session} onLogout={handleLogout} />
       </main>
     </App>
   )

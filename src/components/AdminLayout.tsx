@@ -29,15 +29,15 @@ import {
 } from '@ant-design/icons'
 import { notification } from 'antd'
 
-const { Sider, Header, Content } = Layout
+const { Sider, Content } = Layout
 const { Title } = Typography
 
-interface DashboardProps {
+interface AdminLayoutProps {
   session: Session
   onLogout: () => void
 }
 
-export function Dashboard({ session, onLogout }: DashboardProps) {
+export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
   const [posts, setPosts] = useState<UnifiedPost[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loadingPosts, setLoadingPosts] = useState(true)
@@ -260,8 +260,15 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
     }
     return (
       <>
-        <Title level={2}>Posts</Title>
-        <p className="mb-4 text-gray-500">Manage your blog posts ({posts.length} total)</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <Title level={2} style={{ margin: 0 }}>Posts</Title>
+            <p className="mb-0 text-gray-500">Manage your blog posts ({posts.length} total)</p>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateNew} size="large">
+            New Post
+          </Button>
+        </div>
         <PostList posts={posts} onEdit={handleEditPost} onDelete={handleDeletePost} />
       </>
     );
@@ -346,26 +353,7 @@ export function Dashboard({ session, onLogout }: DashboardProps) {
         </div>
       </Sider>
       <Layout>
-        <Header style={{
-          background: '#fff',
-          padding: '0 24px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderBottom: '1px solid #f0f0f0'
-        }}>
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              {selectedPost ? (isCreating ? 'Create Post' : 'Edit Post') : (selectedMenu === 'posts' ? 'Posts' : 'Users')}
-            </Title>
-          </div>
-          {selectedMenu === 'posts' && !selectedPost && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateNew}>
-              New Post
-            </Button>
-          )}
-        </Header>
-        <Content style={{ margin: '24px 16px', padding: 24, background: '#f0f2f5', minHeight: 280 }}>
+        <Content style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
           <div style={{ background: '#fff', padding: 24, minHeight: 360 }}>
             {renderContent()}
           </div>
