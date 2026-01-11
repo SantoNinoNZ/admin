@@ -1,7 +1,21 @@
 -- Migration: Create invites system for admin authorization
 -- This ensures only invited users can access the admin panel
 
--- 1. Create invites table
+-- 1. Create users table for admin authorization (separate from authors table)
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
+  is_admin BOOLEAN DEFAULT TRUE,
+  invited_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create index for performance
+CREATE INDEX IF NOT EXISTS idx_users_id ON users(id);
+CREATE INDEX IF NOT EXISTS idx_users_is_admin ON users(is_admin);
+
+-- 2. Create invites table
 CREATE TABLE IF NOT EXISTS invites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email TEXT NOT NULL,
@@ -14,34 +28,12 @@ CREATE TABLE IF NOT EXISTS invites (
   CONSTRAINT unique_pending_invite UNIQUE (email, used_at)
 );
 
--- 2. Add index for performance
+-- 3. Add index for performance
 CREATE INDEX idx_invites_token ON invites(token);
 CREATE INDEX idx_invites_email ON invites(email);
 CREATE INDEX idx_invites_expires_at ON invites(expires_at);
 
--- 3. Add is_admin flag to users table (if not exists)
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'users' AND column_name = 'is_admin'
-  ) THEN
-    ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT TRUE;
-  END IF;
-END $$;
-
--- 4. Add invited_by to users table to track who invited them
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'users' AND column_name = 'invited_by'
-  ) THEN
-    ALTER TABLE users ADD COLUMN invited_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
-  END IF;
-END $$;
-
--- 5. Create function to generate invite token
+-- 4. Create function to generate invite token
 CREATE OR REPLACE FUNCTION generate_invite_token()
 RETURNS TEXT AS $$
 BEGIN
@@ -49,7 +41,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 6. Create function to validate and consume invite
+-- 5. Create function to validate and consume invite
 CREATE OR REPLACE FUNCTION consume_invite(invite_token TEXT, user_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -85,7 +77,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 7. Create function to check if user is authorized admin
+-- 6. Create function to check if user is authorized admin
 CREATE OR REPLACE FUNCTION is_authorized_admin(user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -96,10 +88,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 8. Enable RLS on invites table
+-- 7. Enable RLS on invites table
 ALTER TABLE invites ENABLE ROW LEVEL SECURITY;
 
--- 9. Create RLS policies for invites
+-- 8. Create RLS policies for invites
 -- Allow authenticated admins to view all invites
 CREATE POLICY "Admins can view invites"
   ON invites FOR SELECT
@@ -128,10 +120,7 @@ CREATE POLICY "Public can view invite by token"
   TO anon, authenticated
   USING (TRUE);
 
--- 10. Update existing users to be admins (for migration)
-UPDATE users SET is_admin = TRUE WHERE is_admin IS NULL;
-
--- 11. Add RLS policies for users table updates
+-- 9. Add RLS policies for users table updates
 -- Enable RLS on users table if not already enabled
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
@@ -163,5 +152,6 @@ CREATE POLICY "Admins can view all users"
     )
   );
 
--- 12. Add comment
+-- 10. Add comments
+COMMENT ON TABLE users IS 'Stores user admin authorization status';
 COMMENT ON TABLE invites IS 'Stores invitation tokens for admin access control';
