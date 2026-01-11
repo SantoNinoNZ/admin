@@ -24,21 +24,33 @@ export class SupabaseAPI {
       throw new Error('User not authenticated');
     }
 
-    const { data, error } = await supabase.functions.invoke('get-users', {
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
+    try {
+      const { data, error } = await supabase.functions.invoke('get-users', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        }
+      });
+
+      if (error) {
+        // More specific error message
+        if (error.message?.includes('Failed to send')) {
+          throw new Error('Edge function not available. Please ensure migrations are run and function is deployed.')
+        }
+        throw new Error(`Failed to fetch users: ${error.message}`)
       }
-    });
 
-    if (error) {
-      throw new Error(`Failed to fetch users: ${error.message}`)
+      if (data?.error) {
+        throw new Error(`Failed to fetch users: ${data.error}`)
+      }
+
+      return data?.users || []
+    } catch (err) {
+      // Handle network or other errors
+      if (err instanceof Error) {
+        throw err
+      }
+      throw new Error('Failed to connect to user service')
     }
-
-    if (data.error) {
-      throw new Error(`Failed to fetch users: ${data.error}`)
-    }
-
-    return data.users || []
   }
 
   /**
@@ -341,11 +353,12 @@ export class SupabaseAPI {
    */
   private async ensureAuthorExists(user: any): Promise<void> {
     // Check if author exists
+    // Note: Using 'any' cast because database.types.ts is outdated
     const { data: existingAuthor } = await supabase
       .from('authors')
       .select('id, email, full_name, avatar_url')
       .eq('id', user.id)
-      .maybeSingle()
+      .maybeSingle() as { data: any }
 
     const fullName = user.user_metadata?.full_name || user.user_metadata?.name || null
     const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null

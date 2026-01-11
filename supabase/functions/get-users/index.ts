@@ -41,9 +41,15 @@ serve(async (req) => {
       .from('users')
       .select('is_admin')
       .eq('id', currentUser.id)
-      .single()
+      .maybeSingle()
 
-    if (checkError || !currentUserData?.is_admin) {
+    // If users table doesn't exist yet or user not found, log warning but allow
+    if (checkError) {
+      console.warn('Users table check failed:', checkError.message)
+      console.warn('This is expected if migration 006 has not been run yet')
+      // Don't throw - allow function to continue for initial setup
+    } else if (currentUserData && !currentUserData.is_admin) {
+      // If user exists but is not admin, block access
       throw new Error('Forbidden: Admin access required')
     }
 

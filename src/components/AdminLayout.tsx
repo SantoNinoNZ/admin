@@ -53,8 +53,14 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
 
   useEffect(() => {
     loadPosts()
-    loadUsers()
   }, [])
+
+  // Load users only when navigating to users tab
+  useEffect(() => {
+    if (selectedMenu === 'users' && users.length === 0 && !loadingUsers) {
+      loadUsers()
+    }
+  }, [selectedMenu])
 
   const loadPosts = async () => {
     try {
