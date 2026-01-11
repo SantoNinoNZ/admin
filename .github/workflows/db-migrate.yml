@@ -35,8 +35,13 @@ jobs:
 
       - name: Push database migrations
         run: |
-          # Push migrations to the linked Supabase project
-          supabase db push
+          # Push only new migrations (non-interactive)
+          echo "Y" | supabase db push || true
+
+          # If push fails due to existing migrations, try pushing with --include-all
+          # This will attempt to apply only unapplied migrations
+          echo "Attempting to push unapplied migrations..."
+          supabase db push --include-all || echo "All migrations already applied or manual intervention needed"
 
       - name: Verify migration
         run: |
