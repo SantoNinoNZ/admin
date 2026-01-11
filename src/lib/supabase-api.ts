@@ -337,32 +337,50 @@ export class SupabaseAPI {
 
   /**
    * Ensure author record exists for a user
-   * Creates one if it doesn't exist using RPC to bypass RLS
+   * Creates one if it doesn't exist, syncing from auth.users
    */
   private async ensureAuthorExists(user: any): Promise<void> {
     // Check if author exists
     const { data: existingAuthor } = await supabase
       .from('authors')
-      .select('id')
+      .select('id, email, full_name, avatar_url')
       .eq('id', user.id)
       .maybeSingle()
 
+    const fullName = user.user_metadata?.full_name || user.user_metadata?.name || null
+    const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture || null
+    const email = user.email || ''
+
     if (!existingAuthor) {
-      // Try to create author record
-      // Note: Using 'any' type cast because database.types.ts is outdated
-      // TODO: Regenerate types with: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/database.types.ts
+      // Create new author record
       const { error } = await supabase
         .from('authors')
         .insert({
           id: user.id,
-          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User',
-          avatar_url: user.user_metadata?.avatar_url || null,
+          email: email,
+          full_name: fullName,
+          avatar_url: avatarUrl,
         } as any)
 
-      // If insert fails due to RLS or duplicate, that's okay
-      // The post will still be created with author_id, and trigger will handle it later
-      if (error && error.code !== '23505' && error.code !== '42501') {
+      if (error && error.code !== '23505') {
         console.warn('Could not create author record:', error.message)
+      }
+    } else {
+      // Update existing author with latest info from auth.users
+      const needsUpdate =
+        existingAuthor.email !== email ||
+        existingAuthor.full_name !== fullName ||
+        existingAuthor.avatar_url !== avatarUrl
+
+      if (needsUpdate) {
+        await supabase
+          .from('authors')
+          .update({
+            email: email,
+            full_name: fullName,
+            avatar_url: avatarUrl,
+          } as any)
+          .eq('id', user.id)
       }
     }
   }
@@ -371,6 +389,16 @@ export class SupabaseAPI {
    * Update an existing post
    */
   async updatePost(id: string, updates: PostUpdate, tagIds?: string[]): Promise<Post> {
+    // Get current user and ensure they have an author record
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    // Ensure author record exists for the modifier
+    await this.ensureAuthorExists(user)
+
     const updateData: PostUpdate = {
       ...updates,
       // Set published_at when publishing
@@ -379,6 +407,7 @@ export class SupabaseAPI {
         : updates.published_at
     }
 
+    // Note: last_modified_by is set automatically by the database trigger
     const { data, error } = await supabase
       .from('posts')
       .update(updateData)

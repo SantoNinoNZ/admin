@@ -46,6 +46,7 @@ CREATE OR REPLACE FUNCTION consume_invite(invite_token TEXT, user_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
   invite_record RECORD;
+  auth_user_record RECORD;
 BEGIN
   -- Find valid invite
   SELECT * INTO invite_record
@@ -58,6 +59,12 @@ BEGIN
   IF NOT FOUND THEN
     RETURN FALSE;
   END IF;
+
+  -- Get user info from auth.users
+  SELECT id, email, raw_user_meta_data
+  INTO auth_user_record
+  FROM auth.users
+  WHERE id = user_id;
 
   -- Mark invite as used
   UPDATE invites
@@ -72,6 +79,26 @@ BEGIN
   SET email = EXCLUDED.email,
       invited_by = EXCLUDED.invited_by,
       is_admin = TRUE;
+
+  -- Create or update author record
+  INSERT INTO authors (id, email, full_name, avatar_url)
+  VALUES (
+    user_id,
+    auth_user_record.email,
+    COALESCE(
+      auth_user_record.raw_user_meta_data->>'full_name',
+      auth_user_record.raw_user_meta_data->>'name',
+      auth_user_record.email
+    ),
+    COALESCE(
+      auth_user_record.raw_user_meta_data->>'avatar_url',
+      auth_user_record.raw_user_meta_data->>'picture'
+    )
+  )
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email,
+      full_name = EXCLUDED.full_name,
+      avatar_url = EXCLUDED.avatar_url;
 
   RETURN TRUE;
 END;
