@@ -91,6 +91,31 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
     }
   }
 
+  const handleFeaturedImageUpload = async (file: File) => {
+    try {
+      setUploading(true)
+      notification.info({
+        title: 'Uploading Featured Image...',
+        description: `Uploading ${file.name}...`,
+        duration: 2,
+      })
+      const imageUrl = await supabaseAPI.uploadImage(file, 'featured')
+      form.setFieldsValue({ imageUrl })
+      notification.success({
+        title: 'Image Uploaded Successfully!',
+        description: 'Featured image URL has been updated.',
+        duration: 4,
+      })
+    } catch (err) {
+      notification.error({
+        title: 'Upload Failed',
+        description: err instanceof Error ? err.message : 'Failed to upload image'
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -234,6 +259,8 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
     return e && e.fileList
   }
 
+  const imageUrlValue = Form.useWatch('imageUrl', form)
+
   return (
     <Form
       form={form}
@@ -307,9 +334,46 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
               </Form.Item>
             </Col>
             <Col span={12}>
-               <Form.Item name="imageUrl" label="Featured Image URL">
-                  <Input placeholder="https://example.com/image.png" />
+               <Form.Item label="Featured Image URL">
+                  <Space.Compact style={{ width: '100%' }}>
+                    <Form.Item name="imageUrl" noStyle>
+                      <Input placeholder="https://example.com/image.png" />
+                    </Form.Item>
+                    <Button 
+                      icon={<PictureOutlined />} 
+                      loading={uploading}
+                      onClick={() => {
+                        const input = document.createElement('input')
+                        input.type = 'file'
+                        input.accept = 'image/*'
+                        input.onchange = async (e: any) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            await handleFeaturedImageUpload(file)
+                          }
+                        }
+                        input.click()
+                      }}
+                    >
+                      Upload
+                    </Button>
+                  </Space.Compact>
                 </Form.Item>
+                {imageUrlValue && (
+                  <div style={{ marginTop: 8 }}>
+                    <img 
+                      src={imageUrlValue} 
+                      alt="Featured" 
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '200px', 
+                        objectFit: 'cover',
+                        borderRadius: '4px',
+                        border: '1px solid #d9d9d9'
+                      }} 
+                    />
+                  </div>
+                )}
             </Col>
             <Col span={24}>
               <Form.Item name="excerpt" label="Excerpt">
