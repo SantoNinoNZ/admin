@@ -131,5 +131,37 @@ CREATE POLICY "Public can view invite by token"
 -- 10. Update existing users to be admins (for migration)
 UPDATE users SET is_admin = TRUE WHERE is_admin IS NULL;
 
--- 11. Add comment
+-- 11. Add RLS policies for users table updates
+-- Enable RLS on users table if not already enabled
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- Allow admins to update other users' admin status
+CREATE POLICY "Admins can update users"
+  ON users FOR UPDATE
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users AS current_user
+      WHERE current_user.id = auth.uid() AND current_user.is_admin = TRUE
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM users AS current_user
+      WHERE current_user.id = auth.uid() AND current_user.is_admin = TRUE
+    )
+  );
+
+-- Allow admins to view all users
+CREATE POLICY "Admins can view all users"
+  ON users FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users AS current_user
+      WHERE current_user.id = auth.uid() AND current_user.is_admin = TRUE
+    )
+  );
+
+-- 12. Add comment
 COMMENT ON TABLE invites IS 'Stores invitation tokens for admin access control';

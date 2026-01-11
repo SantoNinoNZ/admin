@@ -28,17 +28,14 @@ jobs:
         with:
           version: latest
 
-      - name: Wait for database to be ready
+      - name: Link to Supabase project
         run: |
-          echo "Waiting for Supabase database to become available..."
-          # The `supabase db push` command will wait for the DB to be ready,
-          # so no explicit wait is needed here, but this is a good place
-          # to add one if you experience issues.
+          # Link to the Supabase project using the project ref from config.toml
+          supabase link --project-ref uvxrdmwmscevovbbrnky
 
       - name: Push database migrations
         run: |
-          # The `config.toml` file must contain your project_id
-          # The `SUPABASE_DB_PASSWORD` is required for `db push`.
+          # Push migrations to the linked Supabase project
           supabase db push
 
       - name: Verify migration

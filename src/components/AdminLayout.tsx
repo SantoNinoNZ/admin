@@ -308,7 +308,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
         <>
           <Title level={2}>Users</Title>
           <p className="mb-4 text-gray-500">Manage your users ({users.length} total)</p>
-          <UserList users={users} />
+          <UserList users={users} onRefresh={loadUsers} />
         </>
       );
     }

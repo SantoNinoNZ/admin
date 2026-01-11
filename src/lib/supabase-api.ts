@@ -169,6 +169,45 @@ export class SupabaseAPI {
     };
   }
 
+  /**
+   * Revoke admin access for a user
+   */
+  async revokeAdminAccess(userId: string): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Don't allow users to revoke their own access
+    if (user.id === userId) {
+      throw new Error('Cannot revoke your own admin access');
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update({ is_admin: false })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to revoke admin access: ${error.message}`);
+    }
+  }
+
+  /**
+   * Grant admin access to a user
+   */
+  async grantAdminAccess(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({ is_admin: true })
+      .eq('id', userId);
+
+    if (error) {
+      throw new Error(`Failed to grant admin access: ${error.message}`);
+    }
+  }
+
   // ============================================================================
   // POSTS
   // ============================================================================

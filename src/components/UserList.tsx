@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { User, Invite } from '@/types'
-import { List, Space, Typography, Empty, Avatar, Button, Modal, Form, Input, message, Tag, Tabs } from 'antd'
+import { List, Space, Typography, Empty, Avatar, Button, Modal, Form, Input, message, Tag, Tabs, Popconfirm } from 'antd'
 import {
   CalendarOutlined,
   UserOutlined,
@@ -10,22 +10,37 @@ import {
   CopyOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  StopOutlined,
+  CheckOutlined,
 } from '@ant-design/icons'
 import { supabaseAPI } from '@/lib/supabase-api'
+import { supabase } from '@/lib/supabase'
 
 const { Text, Paragraph } = Typography
 
 interface UserListProps {
   users: User[]
+  onRefresh?: () => void
 }
 
-export function UserList({ users }: UserListProps) {
+export function UserList({ users, onRefresh }: UserListProps) {
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [invites, setInvites] = useState<Invite[]>([])
   const [loadingInvites, setLoadingInvites] = useState(false)
   const [creatingInvite, setCreatingInvite] = useState(false)
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [revokingUserId, setRevokingUserId] = useState<string | null>(null)
   const [form] = Form.useForm()
+
+  useEffect(() => {
+    // Get current user ID
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUserId(user.id)
+      }
+    })
+  }, [])
 
   const loadInvites = async () => {
     try {
@@ -72,6 +87,37 @@ export function UserList({ users }: UserListProps) {
     setGeneratedInviteLink(null)
     form.resetFields()
   }
+
+  const handleRevokeAccess = async (userId: string) => {
+    try {
+      setRevokingUserId(userId)
+      await supabaseAPI.revokeAdminAccess(userId)
+      message.success('Admin access revoked successfully')
+      if (onRefresh) {
+        onRefresh()
+      }
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Failed to revoke admin access')
+    } finally {
+      setRevokingUserId(null)
+    }
+  }
+
+  const handleGrantAccess = async (userId: string) => {
+    try {
+      setRevokingUserId(userId)
+      await supabaseAPI.grantAdminAccess(userId)
+      message.success('Admin access granted successfully')
+      if (onRefresh) {
+        onRefresh()
+      }
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : 'Failed to grant admin access')
+    } finally {
+      setRevokingUserId(null)
+    }
+  }
+
   const pendingInvites = invites.filter(inv => !inv.used_at && new Date(inv.expires_at) > new Date())
   const usedInvites = invites.filter(inv => inv.used_at)
   const expiredInvites = invites.filter(inv => !inv.used_at && new Date(inv.expires_at) <= new Date())
@@ -92,23 +138,79 @@ export function UserList({ users }: UserListProps) {
         itemLayout="horizontal"
         size="large"
         dataSource={users}
-        renderItem={user => (
-          <List.Item key={user.id}>
-            <List.Item.Meta
-              avatar={<Avatar src={user.user_metadata?.avatar_url || undefined} icon={<UserOutlined />} />}
-              title={user.user_metadata?.name || user.email}
-              description={
-                <Space size="middle">
-                  <Text type="secondary">
-                    <CalendarOutlined style={{ marginRight: 8 }} />
-                    {`Joined: ${new Date(user.created_at).toLocaleDateString()}`}
-                  </Text>
-                  {user.is_admin && <Tag color="blue">Admin</Tag>}
-                </Space>
-              }
-            />
-          </List.Item>
-        )}
+        renderItem={user => {
+          const isCurrentUser = user.id === currentUserId
+          const isAdminUser = user.is_admin
+
+          return (
+            <List.Item
+              key={user.id}
+              actions={[
+                isCurrentUser ? (
+                  <Tag color="green">You</Tag>
+                ) : isAdminUser ? (
+                  <Popconfirm
+                    title="Revoke Admin Access"
+                    description="Are you sure you want to revoke admin access for this user?"
+                    onConfirm={() => handleRevokeAccess(user.id)}
+                    okText="Yes, Revoke"
+                    cancelText="Cancel"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button
+                      danger
+                      icon={<StopOutlined />}
+                      loading={revokingUserId === user.id}
+                      size="small"
+                    >
+                      Revoke
+                    </Button>
+                  </Popconfirm>
+                ) : (
+                  <Popconfirm
+                    title="Grant Admin Access"
+                    description="Are you sure you want to grant admin access to this user?"
+                    onConfirm={() => handleGrantAccess(user.id)}
+                    okText="Yes, Grant"
+                    cancelText="Cancel"
+                  >
+                    <Button
+                      type="primary"
+                      icon={<CheckOutlined />}
+                      loading={revokingUserId === user.id}
+                      size="small"
+                    >
+                      Grant
+                    </Button>
+                  </Popconfirm>
+                )
+              ]}
+            >
+              <List.Item.Meta
+                avatar={<Avatar src={user.user_metadata?.avatar_url || undefined} icon={<UserOutlined />} />}
+                title={
+                  <Space>
+                    <span>{user.user_metadata?.name || user.email}</span>
+                    {isCurrentUser && <Tag color="green">You</Tag>}
+                  </Space>
+                }
+                description={
+                  <Space size="middle" wrap>
+                    <Text type="secondary">
+                      <CalendarOutlined style={{ marginRight: 8 }} />
+                      {`Joined: ${new Date(user.created_at).toLocaleDateString()}`}
+                    </Text>
+                    {isAdminUser ? (
+                      <Tag color="blue">Admin</Tag>
+                    ) : (
+                      <Tag color="default">No Access</Tag>
+                    )}
+                  </Space>
+                }
+              />
+            </List.Item>
+          )
+        }}
       />
 
       <Modal
