@@ -41,6 +41,134 @@ export class SupabaseAPI {
     return data.users || []
   }
 
+  /**
+   * Check if current user is authorized admin
+   */
+  async isAuthorizedAdmin(): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return false;
+    }
+
+    // @ts-ignore - RPC function defined in migration
+    const { data, error } = await supabase.rpc('is_authorized_admin', {
+      user_id: user.id
+    });
+
+    if (error) {
+      console.error('Error checking admin authorization:', error);
+      return false;
+    }
+
+    return data === true;
+  }
+
+  /**
+   * Create an invite link
+   */
+  async createInvite(email: string, expiresInDays: number = 7): Promise<{ token: string; expiresAt: string }> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Generate token
+    // @ts-ignore - RPC function defined in migration
+    const { data: tokenData, error: tokenError } = await supabase.rpc('generate_invite_token');
+
+    if (tokenError) {
+      throw new Error(`Failed to generate token: ${tokenError.message}`);
+    }
+
+    const token = tokenData as string;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+    // Create invite
+    const { data, error } = await supabase
+      .from('invites')
+      .insert({
+        email,
+        token,
+        created_by: user.id,
+        expires_at: expiresAt.toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create invite: ${error.message}`);
+    }
+
+    return {
+      token: data.token,
+      expiresAt: data.expires_at,
+    };
+  }
+
+  /**
+   * Get all invites
+   */
+  async getInvites(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('invites')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch invites: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Validate and consume an invite token
+   */
+  async consumeInvite(token: string): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // @ts-ignore - RPC function defined in migration
+    const { data, error } = await supabase.rpc('consume_invite', {
+      invite_token: token,
+      user_id: user.id
+    });
+
+    if (error) {
+      throw new Error(`Failed to consume invite: ${error.message}`);
+    }
+
+    return data === true;
+  }
+
+  /**
+   * Validate an invite token (without consuming)
+   */
+  async validateInvite(token: string): Promise<{ valid: boolean; email?: string }> {
+    const { data, error } = await supabase
+      .from('invites')
+      .select('email, expires_at, used_at')
+      .eq('token', token)
+      .single();
+
+    if (error || !data) {
+      return { valid: false };
+    }
+
+    const isValid = !data.used_at && new Date(data.expires_at) > new Date();
+
+    return {
+      valid: isValid,
+      email: isValid ? data.email : undefined,
+    };
+  }
+
   // ============================================================================
   // POSTS
   // ============================================================================

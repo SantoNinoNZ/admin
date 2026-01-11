@@ -53,8 +53,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
 
   useEffect(() => {
     loadPosts()
-    // Temporarily disabled - causing errors
-    // loadUsers()
+    loadUsers()
   }, [])
 
   const loadPosts = async () => {

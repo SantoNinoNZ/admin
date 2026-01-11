@@ -99,4 +99,17 @@ export interface User {
     name?: string;
     avatar_url?: string;
   };
+  is_admin?: boolean;
+  invited_by?: string;
+}
+
+export interface Invite {
+  id: string;
+  email: string;
+  token: string;
+  created_by: string;
+  created_at: string;
+  expires_at: string;
+  used_at?: string;
+  used_by?: string;
 }
