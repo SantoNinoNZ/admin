@@ -128,3 +128,142 @@ body{
   background-color: transparent;
   padding: 0;
 }
+
+/* ============================================
+   Mobile Responsive Styles
+   ============================================ */
+
+@media (max-width: 576px) {
+  /* Content padding adjustments */
+  .ant-layout-content {
+    padding: 8px !important;
+  }
+
+  /* Card padding adjustments */
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
+  /* List item adjustments */
+  .ant-list-item {
+    padding: 12px 8px !important;
+  }
+
+  .ant-list-item-meta-avatar {
+    margin-right: 12px !important;
+  }
+
+  .ant-list-item-meta-title {
+    font-size: 14px !important;
+  }
+
+  .ant-list-item-meta-description {
+    font-size: 12px !important;
+  }
+
+  .ant-list-item-action {
+    margin-top: 8px !important;
+  }
+
+  /* Form adjustments */
+  .ant-form-item-label {
+    padding-bottom: 4px !important;
+  }
+
+  /* Tag adjustments */
+  .ant-tag {
+    font-size: 11px !important;
+    padding: 0 6px !important;
+  }
+
+  /* Button adjustments */
+  .ant-btn-lg {
+    font-size: 14px !important;
+    padding: 6px 12px !important;
+    height: auto !important;
+  }
+
+  /* Typography adjustments */
+  .ant-typography {
+    font-size: 14px !important;
+  }
+
+  /* Space adjustments */
+  .ant-space-item {
+    margin-right: 4px !important;
+  }
+
+  /* Pagination adjustments */
+  .ant-pagination {
+    font-size: 12px !important;
+  }
+
+  .ant-pagination-item {
+    min-width: 28px !important;
+    height: 28px !important;
+    line-height: 26px !important;
+  }
+
+  .ant-pagination-prev,
+  .ant-pagination-next {
+    min-width: 28px !important;
+    height: 28px !important;
+    line-height: 26px !important;
+  }
+
+  /* TipTap Editor Mobile Styles */
+  .tiptap {
+    padding: 8px !important;
+    font-size: 14px !important;
+    min-height: 200px !important;
+  }
+
+  .tiptap p {
+    margin-bottom: 8px !important;
+  }
+
+  .tiptap h1 {
+    font-size: 1.5rem !important;
+  }
+
+  .tiptap h2 {
+    font-size: 1.25rem !important;
+  }
+
+  .tiptap h3 {
+    font-size: 1.1rem !important;
+  }
+
+  .tiptap img {
+    margin: 0.5em 0 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* List layout adjustments */
+  .ant-list-vertical .ant-list-item-extra {
+    margin-left: 0 !important;
+    margin-top: 12px !important;
+  }
+
+  /* Row/Col adjustments */
+  .ant-row {
+    margin-left: -8px !important;
+    margin-right: -8px !important;
+  }
+
+  .ant-col {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Modal adjustments */
+  .ant-modal {
+    max-width: calc(100vw - 32px) !important;
+    margin: 16px auto !important;
+  }
+
+  .ant-modal-body {
+    padding: 16px !important;
+  }
+}

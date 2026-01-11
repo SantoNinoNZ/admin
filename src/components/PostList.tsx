@@ -64,21 +64,36 @@ export function PostList({ posts, onEdit, onDelete }: PostListProps) {
           showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} posts`,
           pageSizeOptions: ['10', '20', '50', '100'],
           position: 'both',
+          responsive: true,
+          simple: window.innerWidth < 768,
         }}
         renderItem={post => (
           <List.Item
             key={post.id}
             actions={[
-              <Button icon={<EditOutlined />} onClick={() => onEdit(post)}>Edit</Button>,
-              <Button icon={<DeleteOutlined />} danger onClick={() => showDeleteModal(post)}>Delete</Button>,
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => onEdit(post)}
+                size={window.innerWidth < 768 ? 'small' : 'middle'}
+              >
+                {window.innerWidth >= 768 ? 'Edit' : ''}
+              </Button>,
+              <Button
+                icon={<DeleteOutlined />}
+                danger
+                onClick={() => showDeleteModal(post)}
+                size={window.innerWidth < 768 ? 'small' : 'middle'}
+              >
+                {window.innerWidth >= 768 ? 'Delete' : ''}
+              </Button>,
             ]}
             extra={
-              post.image_url && (
+              post.image_url && window.innerWidth >= 768 && (
                 <img
                   width={200}
                   alt="Post featured image"
                   src={post.image_url}
-                  style={{ objectFit: 'cover', height: 120 }}
+                  style={{ objectFit: 'cover', height: 120, borderRadius: '8px' }}
                 />
               )
             }

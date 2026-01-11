@@ -17,6 +17,7 @@ import {
   Avatar,
   Space,
   Typography,
+  Drawer,
 } from 'antd'
 import {
   PlusOutlined,
@@ -26,10 +27,11 @@ import {
   LeftOutlined,
   RightOutlined,
   TeamOutlined,
+  MenuOutlined,
 } from '@ant-design/icons'
 import { notification } from 'antd'
 
-const { Sider, Content } = Layout
+const { Sider, Content, Header } = Layout
 const { Title } = Typography
 
 interface AdminLayoutProps {
@@ -47,6 +49,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState(false)
   const [selectedMenu, setSelectedMenu] = useState('posts')
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
   useEffect(() => {
     loadPosts()
@@ -234,6 +237,58 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
     avatar: session.user.user_metadata?.avatar_url || ''
   }
 
+  const menuItems = [
+    {
+      key: 'posts',
+      icon: <EditOutlined />,
+      label: 'Posts',
+      onClick: () => {
+        setSelectedMenu('posts')
+        setMobileDrawerOpen(false)
+      },
+    },
+    {
+      key: 'users',
+      icon: <TeamOutlined />,
+      label: 'Users',
+      onClick: () => {
+        setSelectedMenu('users')
+        setMobileDrawerOpen(false)
+      },
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'Sign Out',
+      onClick: () => {
+        setMobileDrawerOpen(false)
+        onLogout()
+      },
+    },
+  ]
+
+  const renderUserProfile = (isCollapsed = false) => (
+    <div style={{ padding: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+      <Space orientation="vertical" align="center" style={{ width: '100%' }}>
+        <Avatar
+          size={isCollapsed ? 40 : 64}
+          icon={<UserOutlined />}
+          style={{ backgroundColor: '#1890ff' }}
+        />
+        {!isCollapsed && (
+          <>
+            <Title level={5} style={{ color: 'white', margin: '8px 0 0 0' }}>
+              {user.name}
+            </Title>
+            <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '12px' }}>
+              {user.email}
+            </span>
+          </>
+        )}
+      </Space>
+    </div>
+  )
+
   const renderContent = () => {
     // Show loading spinner based on selected menu
     if (selectedMenu === 'posts' && loadingPosts) {
@@ -260,13 +315,22 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
     }
     return (
       <>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '8px' }}>
           <div>
-            <Title level={2} style={{ margin: 0 }}>Posts</Title>
-            <p className="mb-0 text-gray-500">Manage your blog posts ({posts.length} total)</p>
+            <Title level={2} style={{ margin: 0, fontSize: 'clamp(1.2rem, 4vw, 1.5rem)' }}>Posts</Title>
+            <p className="mb-0 text-gray-500" style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>
+              Manage your blog posts ({posts.length} total)
+            </p>
           </div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateNew} size="large">
-            New Post
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreateNew}
+            size="large"
+            style={{ flexShrink: 0 }}
+          >
+            <span className="hide-on-mobile">New Post</span>
+            <span className="show-on-mobile">New</span>
           </Button>
         </div>
         <PostList posts={posts} onEdit={handleEditPost} onDelete={handleDeletePost} />
@@ -276,6 +340,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
+      {/* Desktop Sidebar */}
       <Sider
         collapsible
         collapsed={collapsed}
@@ -284,51 +349,17 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
           background: '#001529'
         }}
         trigger={null}
+        breakpoint="lg"
+        collapsedWidth={80}
+        className="desktop-sider"
       >
-        <div style={{ padding: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <Space orientation="vertical" align="center" style={{ width: '100%' }}>
-            <Avatar
-              size={collapsed ? 40 : 64}
-              icon={<UserOutlined />}
-              style={{ backgroundColor: '#1890ff' }}
-            />
-            {!collapsed && (
-              <>
-                <Title level={5} style={{ color: 'white', margin: '8px 0 0 0' }}>
-                  {user.name}
-                </Title>
-                <span style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '12px' }}>
-                  {user.email}
-                </span>
-              </>
-            )}
-          </Space>
-        </div>
+        {renderUserProfile(collapsed)}
         <Menu
           theme="dark"
-          defaultSelectedKeys={['1']}
+          selectedKeys={[selectedMenu]}
           mode="inline"
           style={{ borderRight: 0 }}
-          items={[
-            {
-              key: 'posts',
-              icon: <EditOutlined />,
-              label: 'Posts',
-              onClick: () => setSelectedMenu('posts'),
-            },
-            {
-              key: 'users',
-              icon: <TeamOutlined />,
-              label: 'Users',
-              onClick: () => setSelectedMenu('users'),
-            },
-            {
-              key: '2',
-              icon: <LogoutOutlined />,
-              label: 'Sign Out',
-              onClick: onLogout,
-            },
-          ]}
+          items={menuItems}
         />
         <div
           style={{
@@ -352,13 +383,92 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
           )}
         </div>
       </Sider>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        placement="left"
+        onClose={() => setMobileDrawerOpen(false)}
+        open={mobileDrawerOpen}
+        className="mobile-drawer"
+        styles={{
+          body: { padding: 0, background: '#001529' },
+        }}
+        width={280}
+      >
+        {renderUserProfile(false)}
+        <Menu
+          theme="dark"
+          selectedKeys={[selectedMenu]}
+          mode="inline"
+          style={{ borderRight: 0, background: '#001529' }}
+          items={menuItems}
+        />
+      </Drawer>
+
       <Layout>
-        <Content style={{ padding: 24, background: '#f0f2f5', minHeight: '100vh' }}>
-          <div style={{ background: '#fff', padding: 24, minHeight: 360 }}>
+        {/* Mobile Header */}
+        <Header className="mobile-header" style={{
+          background: '#fff',
+          padding: '0 16px',
+          display: 'none',
+          alignItems: 'center',
+          borderBottom: '1px solid #f0f0f0',
+          position: 'sticky',
+          top: 0,
+          zIndex: 1,
+        }}>
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setMobileDrawerOpen(true)}
+            style={{ marginRight: 16 }}
+          />
+          <Title level={4} style={{ margin: 0 }}>
+            Santo Niño Admin
+          </Title>
+        </Header>
+
+        <Content style={{ padding: '16px', background: '#f0f2f5', minHeight: '100vh' }}>
+          <div style={{ background: '#fff', padding: '16px', minHeight: 360, borderRadius: '8px' }}>
             {renderContent()}
           </div>
         </Content>
       </Layout>
+
+      <style jsx global>{`
+        @media (max-width: 991px) {
+          .desktop-sider {
+            display: none !important;
+          }
+          .mobile-header {
+            display: flex !important;
+          }
+        }
+        @media (min-width: 992px) {
+          .mobile-drawer .ant-drawer {
+            display: none;
+          }
+          .mobile-header {
+            display: none !important;
+          }
+        }
+        @media (max-width: 576px) {
+          .hide-on-mobile {
+            display: none !important;
+          }
+          .show-on-mobile {
+            display: inline !important;
+          }
+        }
+        @media (min-width: 577px) {
+          .hide-on-mobile {
+            display: inline !important;
+          }
+          .show-on-mobile {
+            display: none !important;
+          }
+        }
+      `}</style>
     </Layout>
   )
 }

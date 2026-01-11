@@ -242,34 +242,36 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
       initialValues={{ ...post, tags: post.tagIds || [] }}
     >
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-        <div style={{
+        <div className="post-editor-header" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 0',
+          padding: '12px 0',
           borderBottom: '1px solid #f0f0f0',
-          marginBottom: 16
+          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: '12px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Button icon={<ArrowLeftOutlined />} onClick={onCancel} size="large" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <Button icon={<ArrowLeftOutlined />} onClick={onCancel} />
             <div>
-              <Title level={3} style={{ margin: 0 }}>
+              <Title level={3} style={{ margin: 0, fontSize: 'clamp(1rem, 3vw, 1.25rem)' }}>
                 {isNew ? 'Create New Post' : 'Edit Post'}
               </Title>
             </div>
           </div>
-          <Space size="middle">
+          <Space size="small" wrap style={{ flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: '14px', color: '#00000073' }}>Status</span>
+              <span className="hide-on-small-mobile" style={{ fontSize: '14px', color: '#00000073' }}>Status</span>
               <Form.Item name="published" valuePropName="checked" style={{ marginBottom: 0 }}>
                 <Switch checkedChildren="Published" unCheckedChildren="Draft" />
               </Form.Item>
             </div>
-            <Button onClick={onCancel} icon={<CloseCircleOutlined />} size="large">
-              Cancel
+            <Button onClick={onCancel} icon={<CloseCircleOutlined />} className="hide-text-on-mobile">
+              <span className="button-text">Cancel</span>
             </Button>
-            <Button type="primary" htmlType="submit" loading={saving} icon={<SaveOutlined />} size="large">
-              Save
+            <Button type="primary" htmlType="submit" loading={saving} icon={<SaveOutlined />} className="hide-text-on-mobile">
+              <span className="button-text">Save</span>
             </Button>
           </Space>
         </div>
@@ -482,6 +484,32 @@ export function PostEditor({ post, isNew, onSave, onCancel }: PostEditorProps) {
         </Card>
 
       </Space>
+
+      <style jsx>{`
+        @media (max-width: 576px) {
+          :global(.hide-text-on-mobile .button-text) {
+            display: none;
+          }
+          :global(.hide-on-small-mobile) {
+            display: none !important;
+          }
+          :global(.ant-card) {
+            border-radius: 4px;
+          }
+          :global(.ant-form-item) {
+            margin-bottom: 16px;
+          }
+          :global(.tiptap) {
+            min-height: 200px;
+            font-size: 14px;
+          }
+        }
+        @media (min-width: 577px) {
+          :global(.hide-text-on-mobile .button-text) {
+            display: inline;
+          }
+        }
+      `}</style>
     </Form>
   )
 }

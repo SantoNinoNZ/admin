@@ -6,6 +6,11 @@ import '../styles/globals.css'
 export const metadata: Metadata = {
   title: 'Santo Niño Admin',
   description: 'Content management system for santoninonz.github.io',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+  },
 }
 
 export default function RootLayout({
