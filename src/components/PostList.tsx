@@ -24,6 +24,8 @@ interface PostListProps {
 
 export function PostList({ posts, onEdit, onDelete }: PostListProps) {
   const [postToDelete, setPostToDelete] = useState<UnifiedPost | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const showDeleteModal = (post: UnifiedPost) => {
     setPostToDelete(post)
@@ -50,6 +52,19 @@ export function PostList({ posts, onEdit, onDelete }: PostListProps) {
         itemLayout="vertical"
         size="large"
         dataSource={posts}
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          total: posts.length,
+          onChange: (page, size) => {
+            setCurrentPage(page)
+            setPageSize(size)
+          },
+          showSizeChanger: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} posts`,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          position: 'both',
+        }}
         renderItem={post => (
           <List.Item
             key={post.id}

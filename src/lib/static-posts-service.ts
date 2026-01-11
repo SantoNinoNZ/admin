@@ -5,8 +5,9 @@ import type { StaticPost, PostFormData } from '@/types';
 export class StaticPostsService {
   /**
    * Fetch all static posts from GitHub
+   * @param limit - Optional limit on number of posts to fetch (default: 50 for performance)
    */
-  static async getAllStaticPosts(): Promise<StaticPost[]> {
+  static async getAllStaticPosts(limit: number = 50): Promise<StaticPost[]> {
     if (!GitHubAPI.isConfigured()) {
       console.warn('GitHub token not configured, skipping static posts');
       return [];
@@ -15,13 +16,16 @@ export class StaticPostsService {
     try {
       console.log('Fetching static posts from GitHub...');
       const files = await GitHubAPI.listPostFiles();
-      console.log(`Found ${files.length} markdown files`);
+      console.log(`Found ${files.length} markdown files, fetching ${Math.min(limit, files.length)}...`);
+
+      // Limit the number of files to fetch for better performance
+      const filesToFetch = files.slice(0, limit);
       const posts: StaticPost[] = [];
 
       // Fetch content for each file (in parallel with limit)
       const batchSize = 5;
-      for (let i = 0; i < files.length; i += batchSize) {
-        const batch = files.slice(i, i + batchSize);
+      for (let i = 0; i < filesToFetch.length; i += batchSize) {
+        const batch = filesToFetch.slice(i, i + batchSize);
         const batchPosts = await Promise.all(
           batch.map(async (file) => {
             try {
