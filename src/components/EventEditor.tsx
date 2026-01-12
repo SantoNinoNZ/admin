@@ -23,6 +23,8 @@ import {
 import type { Event, CreateEventDTO, UpdateEventDTO, EventDay, EventSuspension, EventType } from '@/types/events'
 import { EventDaysEditor } from './EventDaysEditor'
 import { EventSuspensionsEditor } from './EventSuspensionsEditor'
+import { RRuleBuilder } from './RRuleBuilder'
+import { rruleToText } from '@/utils/rrule-to-text'
 
 const { TextArea } = Input
 const { Title } = Typography
@@ -67,6 +69,7 @@ export function EventEditor({ event, isNew, onSave, onCancel }: EventEditorProps
       if (event.type === 'recurring') {
         formData.recurrence = event.recurrence
         formData.time = event.time
+        formData.rrule = event.rrule || ''
       } else if (event.type === 'dated') {
         formData.start_date = event.start_date
         formData.end_date = event.end_date
@@ -77,6 +80,16 @@ export function EventEditor({ event, isNew, onSave, onCancel }: EventEditorProps
       form.setFieldsValue(formData)
     }
   }, [event, form])
+
+  // Auto-generate recurrence text from RRULE when it changes
+  const handleFormValuesChange = (changedValues: any) => {
+    if (changedValues.rrule !== undefined && eventType === 'recurring') {
+      const generatedText = rruleToText(changedValues.rrule)
+      if (generatedText) {
+        form.setFieldsValue({ recurrence: generatedText })
+      }
+    }
+  }
 
   const handleSubmit = async (values: any) => {
     try {
@@ -100,6 +113,7 @@ export function EventEditor({ event, isNew, onSave, onCancel }: EventEditorProps
           ...baseData,
           recurrence: values.recurrence,
           time: values.time,
+          rrule: values.rrule || undefined,
         } as any
       } else {
         eventData = {
@@ -168,6 +182,7 @@ export function EventEditor({ event, isNew, onSave, onCancel }: EventEditorProps
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
+          onValuesChange={handleFormValuesChange}
           initialValues={{ published: true }}
         >
           <Row gutter={16}>
@@ -225,27 +240,41 @@ export function EventEditor({ event, isNew, onSave, onCancel }: EventEditorProps
           <Divider>Schedule Information</Divider>
 
           {eventType === 'recurring' ? (
-            <Row gutter={16}>
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label="Recurrence Pattern"
-                  name="recurrence"
-                  rules={[{ required: true, message: 'Please enter recurrence pattern' }]}
-                >
-                  <Input placeholder="Every First and Third Friday of the Month" size="large" />
-                </Form.Item>
-              </Col>
+            <>
+              <Row gutter={16}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Recurrence Pattern"
+                    name="recurrence"
+                    rules={[{ required: true, message: 'Please enter recurrence pattern' }]}
+                    help="Auto-generated from the recurrence rule below"
+                  >
+                    <Input placeholder="Every First and Third Friday of the Month" size="large" disabled />
+                  </Form.Item>
+                </Col>
 
-              <Col xs={24} md={12}>
-                <Form.Item
-                  label="Time"
-                  name="time"
-                  rules={[{ required: true, message: 'Please enter time' }]}
-                >
-                  <Input placeholder="7:30 PM" size="large" />
-                </Form.Item>
-              </Col>
-            </Row>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Time"
+                    name="time"
+                    rules={[{ required: true, message: 'Please enter time' }]}
+                  >
+                    <Input placeholder="7:30 PM" size="large" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col xs={24}>
+                  <Form.Item
+                    label="Recurrence Rule (Visual Builder)"
+                    name="rrule"
+                  >
+                    <RRuleBuilder />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
           ) : (
             <>
               <Row gutter={16}>

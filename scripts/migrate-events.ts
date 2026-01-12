@@ -5,10 +5,15 @@
  * Usage: npx tsx scripts/migrate-events.ts
  */
 
+import { config } from 'dotenv'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import yaml from 'js-yaml'
 import { createClient } from '@supabase/supabase-js'
+
+// Load environment variables from .env.local (fallback to .env)
+config({ path: '.env.local' })
+config({ path: '.env' })
 
 // Configure Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!

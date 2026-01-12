@@ -11,6 +11,7 @@ import { PostList } from './PostList'
 import { UserList } from './UserList'
 import { EventList } from './EventList'
 import { EventEditor } from './EventEditor'
+import { EventCalendarView } from './EventCalendarView'
 import {
   Layout,
   Menu,
@@ -21,6 +22,7 @@ import {
   Space,
   Typography,
   Drawer,
+  Segmented,
 } from 'antd'
 import {
   PlusOutlined,
@@ -32,6 +34,7 @@ import {
   TeamOutlined,
   MenuOutlined,
   CalendarOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons'
 import { notification } from 'antd'
 
@@ -58,6 +61,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [selectedMenu, setSelectedMenu] = useState('posts')
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [eventsView, setEventsView] = useState<'list' | 'calendar'>('list')
 
   useEffect(() => {
     loadPosts()
@@ -435,18 +439,32 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
                 Manage your events ({events.length} total)
               </p>
             </div>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleCreateNewEvent}
-              size="large"
-              style={{ flexShrink: 0 }}
-            >
-              <span className="hide-on-mobile">New Event</span>
-              <span className="show-on-mobile">New</span>
-            </Button>
+            <Space>
+              <Segmented
+                value={eventsView}
+                onChange={(value) => setEventsView(value as 'list' | 'calendar')}
+                options={[
+                  { label: 'List', value: 'list', icon: <UnorderedListOutlined /> },
+                  { label: 'Calendar', value: 'calendar', icon: <CalendarOutlined /> },
+                ]}
+              />
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreateNewEvent}
+                size="large"
+                style={{ flexShrink: 0 }}
+              >
+                <span className="hide-on-mobile">New Event</span>
+                <span className="show-on-mobile">New</span>
+              </Button>
+            </Space>
           </div>
-          <EventList events={events} onEdit={handleEditEvent} onDelete={handleDeleteEvent} />
+          {eventsView === 'list' ? (
+            <EventList events={events} onEdit={handleEditEvent} onDelete={handleDeleteEvent} />
+          ) : (
+            <EventCalendarView events={events} />
+          )}
         </>
       );
     }

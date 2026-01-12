@@ -45,6 +45,7 @@ export interface RecurringEvent extends BaseEvent {
   type: 'recurring'
   recurrence: string // e.g., "Every First and Third Friday of the Month"
   time: string // e.g., "7:30 PM"
+  rrule?: string // iCalendar RRULE format (e.g., "FREQ=MONTHLY;BYDAY=1FR,3FR")
   suspensions?: EventSuspension[]
 
   // These should be null for recurring events
@@ -87,6 +88,7 @@ export interface CreateRecurringEventDTO {
   type: 'recurring'
   recurrence: string
   time: string
+  rrule?: string
   venue: string
   address: string
   content?: string
