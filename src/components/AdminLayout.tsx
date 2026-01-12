@@ -5,9 +5,12 @@ import type { Session } from '@supabase/supabase-js'
 import { supabaseAPI } from '@/lib/supabase-api'
 import { StaticPostsService } from '@/lib/static-posts-service'
 import type { PostWithDetails, PostFormData, User, UnifiedPost, StaticPost } from '@/types'
+import type { Event, CreateEventDTO, UpdateEventDTO } from '@/types/events'
 import { PostEditor } from './PostEditor'
 import { PostList } from './PostList'
 import { UserList } from './UserList'
+import { EventList } from './EventList'
+import { EventEditor } from './EventEditor'
 import {
   Layout,
   Menu,
@@ -28,6 +31,7 @@ import {
   RightOutlined,
   TeamOutlined,
   MenuOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons'
 import { notification } from 'antd'
 
@@ -42,10 +46,14 @@ interface AdminLayoutProps {
 export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
   const [posts, setPosts] = useState<UnifiedPost[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [loadingEvents, setLoadingEvents] = useState(false)
   const [selectedPost, setSelectedPost] = useState<PostFormData | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState(false)
   const [selectedMenu, setSelectedMenu] = useState('posts')
@@ -59,6 +67,13 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
   useEffect(() => {
     if (selectedMenu === 'users' && users.length === 0 && !loadingUsers) {
       loadUsers()
+    }
+  }, [selectedMenu])
+
+  // Load events only when navigating to events tab
+  useEffect(() => {
+    if (selectedMenu === 'events' && events.length === 0 && !loadingEvents) {
+      loadEvents()
     }
   }, [selectedMenu])
 
@@ -105,6 +120,21 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
       notification.error({ title: 'Error', description: message });
     } finally {
       setLoadingUsers(false)
+    }
+  }
+
+  const loadEvents = async () => {
+    try {
+      setLoadingEvents(true)
+      setError('')
+      const eventsData = await supabaseAPI.getEvents()
+      setEvents(eventsData)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load events'
+      setError(message)
+      notification.error({ title: 'Error', description: message });
+    } finally {
+      setLoadingEvents(false)
     }
   }
 
@@ -236,6 +266,68 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
     setIsCreating(false)
   }
 
+  const handleCreateNewEvent = () => {
+    setSelectedEvent(null)
+    setIsCreatingEvent(true)
+  }
+
+  const handleEditEvent = (event: Event) => {
+    setSelectedEvent(event)
+    setIsCreatingEvent(false)
+  }
+
+  const handleSaveEvent = async (eventData: CreateEventDTO | UpdateEventDTO) => {
+    try {
+      if ('id' in eventData) {
+        await supabaseAPI.updateEvent(eventData.id, eventData as UpdateEventDTO)
+        notification.success({
+          message: 'Success',
+          description: 'Event updated successfully!',
+        })
+      } else {
+        await supabaseAPI.createEvent(eventData as CreateEventDTO)
+        notification.success({
+          message: 'Success',
+          description: 'Event created successfully!',
+        })
+      }
+
+      await loadEvents()
+      setSelectedEvent(null)
+      setIsCreatingEvent(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save event'
+      notification.error({
+        message: 'Error',
+        description: message,
+      })
+      throw err
+    }
+  }
+
+  const handleDeleteEvent = async (event: Event) => {
+    try {
+      await supabaseAPI.deleteEvent(event.id)
+      notification.success({
+        message: 'Success',
+        description: 'Event deleted successfully!',
+      })
+      await loadEvents()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete event'
+      setError(message)
+      notification.error({
+        message: 'Error',
+        description: message,
+      })
+    }
+  }
+
+  const handleCancelEvent = () => {
+    setSelectedEvent(null)
+    setIsCreatingEvent(false)
+  }
+
   const user = {
     name: session.user.user_metadata?.full_name || session.user.email || 'User',
     email: session.user.email || '',
@@ -249,6 +341,15 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
       label: 'Posts',
       onClick: () => {
         setSelectedMenu('posts')
+        setMobileDrawerOpen(false)
+      },
+    },
+    {
+      key: 'events',
+      icon: <CalendarOutlined />,
+      label: 'Events',
+      onClick: () => {
+        setSelectedMenu('events')
         setMobileDrawerOpen(false)
       },
     },
@@ -302,12 +403,18 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
     if (selectedMenu === 'users' && loadingUsers) {
       return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
     }
+    if (selectedMenu === 'events' && loadingEvents) {
+      return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
+    }
 
-    if (error && posts.length === 0 && users.length === 0) {
+    if (error && posts.length === 0 && users.length === 0 && events.length === 0) {
       return <Alert title="Error" description={error} type="error" showIcon closable />;
     }
     if (selectedPost) {
       return <PostEditor post={selectedPost} isNew={isCreating} onSave={handleSavePost} onCancel={handleCancel} />;
+    }
+    if (selectedEvent || isCreatingEvent) {
+      return <EventEditor event={selectedEvent || undefined} isNew={isCreatingEvent} onSave={handleSaveEvent} onCancel={handleCancelEvent} />;
     }
     if (selectedMenu === 'users') {
       return (
@@ -315,6 +422,31 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
           <Title level={2}>Users</Title>
           <p className="mb-4 text-gray-500">Manage your users ({users.length} total)</p>
           <UserList users={users} onRefresh={loadUsers} />
+        </>
+      );
+    }
+    if (selectedMenu === 'events') {
+      return (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '8px' }}>
+            <div>
+              <Title level={2} style={{ margin: 0, fontSize: 'clamp(1.2rem, 4vw, 1.5rem)' }}>Events</Title>
+              <p className="mb-0 text-gray-500" style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>
+                Manage your events ({events.length} total)
+              </p>
+            </div>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreateNewEvent}
+              size="large"
+              style={{ flexShrink: 0 }}
+            >
+              <span className="hide-on-mobile">New Event</span>
+              <span className="show-on-mobile">New</span>
+            </Button>
+          </div>
+          <EventList events={events} onEdit={handleEditEvent} onDelete={handleDeleteEvent} />
         </>
       );
     }

@@ -12,7 +12,8 @@
     "build": "next build",
     "start": "next start",
     "export": "next build && next export",
-    "deploy": "npm run export && touch out/.nojekyll"
+    "deploy": "npm run export && touch out/.nojekyll",
+    "migrate:events": "tsx scripts/migrate-events.ts"
   },
   "repository": {
     "type": "git",
@@ -52,6 +53,7 @@
     "typescript": "^5.9.3"
   },
   "devDependencies": {
-    "@types/turndown": "^5.0.6"
+    "@types/turndown": "^5.0.6",
+    "tsx": "^4.21.0"
   }
 }

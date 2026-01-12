@@ -7,6 +7,17 @@
 
 import { supabase } from './supabase'
 import type { Post, PostWithDetails, PostInsert, PostUpdate, Category, Tag, User } from '@/types'
+import type {
+  Event,
+  CreateEventDTO,
+  UpdateEventDTO,
+  EventDay,
+  EventSuspension,
+  RecurringEvent,
+  DatedEvent,
+  isRecurringEvent,
+  isDatedEvent
+} from '@/types/events'
 
 export class SupabaseAPI {
 
@@ -680,6 +691,287 @@ export class SupabaseAPI {
 
     if (error) {
       throw new Error(`Failed to check slug: ${error.message}`)
+    }
+
+    return data.length === 0
+  }
+
+  // ============================================================================
+  // EVENTS
+  // ============================================================================
+
+  /**
+   * Get all events
+   */
+  async getEvents(): Promise<Event[]> {
+    const { data, error } = await supabase
+      .from('events_with_details' as any)
+      .select('*')
+      .order('created_at', { ascending: false }) as any
+
+    if (error) {
+      throw new Error(`Failed to fetch events: ${error.message}`)
+    }
+
+    return (data || []) as Event[]
+  }
+
+  /**
+   * Get a single event by ID
+   */
+  async getEvent(id: string): Promise<Event> {
+    const { data, error } = await supabase
+      .from('events_with_details' as any)
+      .select('*')
+      .eq('id', id)
+      .single() as any
+
+    if (error) {
+      throw new Error(`Failed to fetch event: ${error.message}`)
+    }
+
+    return data as Event
+  }
+
+  /**
+   * Get a single event by slug
+   */
+  async getEventBySlug(slug: string): Promise<Event> {
+    const { data, error } = await supabase
+      .from('events_with_details' as any)
+      .select('*')
+      .eq('slug', slug)
+      .single() as any
+
+    if (error) {
+      throw new Error(`Failed to fetch event: ${error.message}`)
+    }
+
+    return data as Event
+  }
+
+  /**
+   * Create a new event
+   */
+  async createEvent(eventData: CreateEventDTO): Promise<Event> {
+    // Get current user and ensure they have an author record
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    await this.ensureAuthorExists(user)
+
+    // Extract days if it's a dated event
+    const days = 'days' in eventData ? eventData.days : undefined
+
+    // Create the main event record (without days)
+    const { days: _, ...eventWithoutDays } = eventData as any
+
+    const { data: newEvent, error: eventError } = await supabase
+      .from('events' as any)
+      .insert({
+        ...eventWithoutDays,
+        created_by: user.id
+      })
+      .select()
+      .single() as any
+
+    if (eventError) {
+      throw new Error(`Failed to create event: ${eventError.message}`)
+    }
+
+    // If it's a dated event, create the days
+    if (days && days.length > 0) {
+      const daysToInsert = days.map((day: Omit<EventDay, 'id'>) => ({
+        event_id: newEvent.id,
+        day_number: day.dayNumber,
+        date: day.date,
+        choir: day.choir,
+        sponsors_pilgrims: day.sponsorsPilgrims,
+        area_coordinators: day.areaCoordinators
+      }))
+
+      const { error: daysError } = await supabase
+        .from('event_days' as any)
+        .insert(daysToInsert) as any
+
+      if (daysError) {
+        // Rollback: delete the event
+        await supabase.from('events' as any).delete().eq('id', newEvent.id)
+        throw new Error(`Failed to create event days: ${daysError.message}`)
+      }
+    }
+
+    // Fetch the complete event with all related data
+    return this.getEvent(newEvent.id)
+  }
+
+  /**
+   * Update an existing event
+   */
+  async updateEvent(id: string, updates: UpdateEventDTO): Promise<Event> {
+    // Get current user and ensure they have an author record
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    await this.ensureAuthorExists(user)
+
+    // Extract days if present
+    const days = 'days' in updates ? updates.days : undefined
+    const { days: _, id: __, ...eventUpdates } = updates as any
+
+    // Update the main event record
+    const { error: eventError } = await supabase
+      .from('events' as any)
+      .update(eventUpdates)
+      .eq('id', id) as any
+
+    if (eventError) {
+      throw new Error(`Failed to update event: ${eventError.message}`)
+    }
+
+    // If days are provided, replace all existing days
+    if (days !== undefined) {
+      // Delete existing days
+      await supabase
+        .from('event_days' as any)
+        .delete()
+        .eq('event_id', id) as any
+
+      // Insert new days if any
+      if (days.length > 0) {
+        const daysToInsert = days.map((day: Omit<EventDay, 'id'>) => ({
+          event_id: id,
+          day_number: day.dayNumber,
+          date: day.date,
+          choir: day.choir,
+          sponsors_pilgrims: day.sponsorsPilgrims,
+          area_coordinators: day.areaCoordinators
+        }))
+
+        const { error: daysError } = await supabase
+          .from('event_days' as any)
+          .insert(daysToInsert) as any
+
+        if (daysError) {
+          throw new Error(`Failed to update event days: ${daysError.message}`)
+        }
+      }
+    }
+
+    // Fetch the complete event with all related data
+    return this.getEvent(id)
+  }
+
+  /**
+   * Delete an event
+   */
+  async deleteEvent(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('events' as any)
+      .delete()
+      .eq('id', id) as any
+
+    if (error) {
+      throw new Error(`Failed to delete event: ${error.message}`)
+    }
+  }
+
+  /**
+   * Add a suspension to a recurring event
+   */
+  async addEventSuspension(
+    eventId: string,
+    suspension: Omit<EventSuspension, 'id'>
+  ): Promise<EventSuspension> {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    const { data, error } = await supabase
+      .from('event_suspensions' as any)
+      .insert({
+        event_id: eventId,
+        start_date: suspension.startDate,
+        end_date: suspension.endDate,
+        reason: suspension.reason,
+        created_by: user.id
+      })
+      .select()
+      .single() as any
+
+    if (error) {
+      throw new Error(`Failed to add suspension: ${error.message}`)
+    }
+
+    return {
+      id: data.id,
+      startDate: data.start_date,
+      endDate: data.end_date,
+      reason: data.reason
+    }
+  }
+
+  /**
+   * Remove a suspension from a recurring event
+   */
+  async removeEventSuspension(suspensionId: string): Promise<void> {
+    const { error } = await supabase
+      .from('event_suspensions' as any)
+      .delete()
+      .eq('id', suspensionId) as any
+
+    if (error) {
+      throw new Error(`Failed to remove suspension: ${error.message}`)
+    }
+  }
+
+  /**
+   * Get all suspensions for an event
+   */
+  async getEventSuspensions(eventId: string): Promise<EventSuspension[]> {
+    const { data, error } = await supabase
+      .from('event_suspensions' as any)
+      .select('*')
+      .eq('event_id', eventId)
+      .order('start_date', { ascending: true }) as any
+
+    if (error) {
+      throw new Error(`Failed to fetch suspensions: ${error.message}`)
+    }
+
+    return (data || []).map((s: any) => ({
+      id: s.id,
+      startDate: s.start_date,
+      endDate: s.end_date,
+      reason: s.reason
+    }))
+  }
+
+  /**
+   * Check if event slug is unique
+   */
+  async isEventSlugUnique(slug: string, excludeId?: string): Promise<boolean> {
+    let query = supabase
+      .from('events' as any)
+      .select('id')
+      .eq('slug', slug)
+
+    if (excludeId) {
+      query = query.neq('id', excludeId)
+    }
+
+    const { data, error } = await query as any
+
+    if (error) {
+      throw new Error(`Failed to check event slug: ${error.message}`)
     }
 
     return data.length === 0
