@@ -11,6 +11,7 @@ import { AdminLayoutShell } from '@/components/AdminLayoutShell'
 import { GoogleAuthComponent } from '@/components/GoogleAuth'
 import { OfflineIndicator } from '@/components/OfflineIndicator'
 import { InstallPWAButton } from '@/components/InstallPWAButton'
+import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -111,6 +112,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <App>
+      <ServiceWorkerRegistration />
       <main className="min-h-screen">
         <OfflineIndicator />
         <AdminLayoutShell session={session} onLogout={handleLogout} section={section}>
