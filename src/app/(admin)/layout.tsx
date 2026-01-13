@@ -1,25 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { AdminLayout } from '@/components/AdminLayout'
-import { GoogleAuthComponent } from '@/components/GoogleAuth'
+import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { supabaseAPI } from '@/lib/supabase-api'
 import type { Session } from '@supabase/supabase-js'
 import { Spin, App, Result, Button } from 'antd'
 import { LockOutlined } from '@ant-design/icons'
+import { AdminLayoutShell } from '@/components/AdminLayoutShell'
 
-interface AdminPageProps {
-  section: string
-}
-
-export function AdminPage({ section }: AdminPageProps) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [checkingAuth, setCheckingAuth] = useState(false)
   const [isAuthorized, setIsAuthorized] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Extract section from pathname
+  const section = pathname?.split('/')[1] || 'posts'
 
   useEffect(() => {
     // Check for existing session
@@ -79,11 +78,9 @@ export function AdminPage({ section }: AdminPageProps) {
   }
 
   if (!session) {
-    return (
-      <App>
-        <GoogleAuthComponent />
-      </App>
-    )
+    // Redirect to login (root page)
+    router.push('/')
+    return null
   }
 
   if (session && !isAuthorized) {
@@ -109,7 +106,9 @@ export function AdminPage({ section }: AdminPageProps) {
   return (
     <App>
       <main className="min-h-screen">
-        <AdminLayout session={session} onLogout={handleLogout} section={section} />
+        <AdminLayoutShell session={session} onLogout={handleLogout} section={section}>
+          {children}
+        </AdminLayoutShell>
       </main>
     </App>
   )
