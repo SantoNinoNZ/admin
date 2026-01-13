@@ -5,6 +5,7 @@ import { Card, Button, Typography, Space } from 'antd'
 import { GoogleOutlined } from '@ant-design/icons'
 import { supabase } from '@/lib/supabase'
 import { notification } from 'antd'
+import Image from 'next/image'
 
 const { Title, Text } = Typography
 
@@ -52,7 +53,7 @@ export function GoogleAuthComponent({ onAuth }: GoogleAuthProps) {
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #667eea 0%, #f0931a 100%)',
       padding: '20px'
     }}>
       <Card
@@ -64,8 +65,8 @@ export function GoogleAuthComponent({ onAuth }: GoogleAuthProps) {
       >
         <Space orientation="vertical" size="large" style={{ width: '100%', textAlign: 'center' }}>
           <div>
-            <GoogleOutlined style={{ fontSize: 48, color: '#1890ff', marginBottom: 16 }} />
-            <Title level={2} style={{ margin: 0 }}>Santo Niño Admin</Title>
+            <Image src="santonino.svg" alt="Santo Niño Logo" width={64} height={64} style={{ marginBottom: 16 }} />
+            <Title level={2} style={{ margin: 0 }}>Santo Niño New Zealand Administration Portal</Title>
           </div>
 
           <div>
