@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { Session } from '@supabase/supabase-js'
 import { supabaseAPI } from '@/lib/supabase-api'
 import { StaticPostsService } from '@/lib/static-posts-service'
@@ -44,9 +46,12 @@ const { Title } = Typography
 interface AdminLayoutProps {
   session: Session
   onLogout: () => void
+  section: string
 }
 
-export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
+export function AdminLayout({ session, onLogout, section }: AdminLayoutProps) {
+  const router = useRouter()
+
   const [posts, setPosts] = useState<UnifiedPost[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -59,7 +64,6 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
   const [isCreatingEvent, setIsCreatingEvent] = useState(false)
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState(false)
-  const [selectedMenu, setSelectedMenu] = useState('posts')
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const [eventsView, setEventsView] = useState<'list' | 'calendar'>('list')
 
@@ -69,17 +73,17 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
 
   // Load users only when navigating to users tab
   useEffect(() => {
-    if (selectedMenu === 'users' && users.length === 0 && !loadingUsers) {
+    if (section === 'users' && users.length === 0 && !loadingUsers) {
       loadUsers()
     }
-  }, [selectedMenu])
+  }, [section])
 
   // Load events only when navigating to events tab
   useEffect(() => {
-    if (selectedMenu === 'events' && events.length === 0 && !loadingEvents) {
+    if (section === 'events' && events.length === 0 && !loadingEvents) {
       loadEvents()
     }
-  }, [selectedMenu])
+  }, [section])
 
   const loadPosts = async () => {
     try {
@@ -338,33 +342,30 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
     avatar: session.user.user_metadata?.avatar_url || ''
   }
 
+  const handleMenuClick = (targetSection: string) => {
+    setMobileDrawerOpen(false)
+    // basePath '/admin' is automatically prepended by Next.js
+    router.push(`/${targetSection}`)
+  }
+
   const menuItems = [
     {
       key: 'posts',
       icon: <EditOutlined />,
       label: 'Posts',
-      onClick: () => {
-        setSelectedMenu('posts')
-        setMobileDrawerOpen(false)
-      },
+      onClick: () => handleMenuClick('posts'),
     },
     {
       key: 'events',
       icon: <CalendarOutlined />,
       label: 'Events',
-      onClick: () => {
-        setSelectedMenu('events')
-        setMobileDrawerOpen(false)
-      },
+      onClick: () => handleMenuClick('events'),
     },
     {
       key: 'users',
       icon: <TeamOutlined />,
       label: 'Users',
-      onClick: () => {
-        setSelectedMenu('users')
-        setMobileDrawerOpen(false)
-      },
+      onClick: () => handleMenuClick('users'),
     },
     {
       key: 'logout',
@@ -400,14 +401,14 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
   )
 
   const renderContent = () => {
-    // Show loading spinner based on selected menu
-    if (selectedMenu === 'posts' && loadingPosts) {
+    // Show loading spinner based on selected section
+    if (section === 'posts' && loadingPosts) {
       return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
     }
-    if (selectedMenu === 'users' && loadingUsers) {
+    if (section === 'users' && loadingUsers) {
       return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
     }
-    if (selectedMenu === 'events' && loadingEvents) {
+    if (section === 'events' && loadingEvents) {
       return <div className="flex justify-center items-center h-full"><Spin size="large" /></div>;
     }
 
@@ -420,7 +421,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
     if (selectedEvent || isCreatingEvent) {
       return <EventEditor event={selectedEvent || undefined} isNew={isCreatingEvent} onSave={handleSaveEvent} onCancel={handleCancelEvent} />;
     }
-    if (selectedMenu === 'users') {
+    if (section === 'users') {
       return (
         <>
           <Title level={2}>Users</Title>
@@ -429,7 +430,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
         </>
       );
     }
-    if (selectedMenu === 'events') {
+    if (section === 'events') {
       return (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '8px' }}>
@@ -511,7 +512,7 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
         {renderUserProfile(collapsed)}
         <Menu
           theme="dark"
-          selectedKeys={[selectedMenu]}
+          selectedKeys={[section]}
           mode="inline"
           style={{ borderRight: 0 }}
           items={menuItems}
@@ -548,12 +549,12 @@ export function AdminLayout({ session, onLogout }: AdminLayoutProps) {
         styles={{
           body: { padding: 0, background: '#001529' },
         }}
-        width={280}
+        size="default"
       >
         {renderUserProfile(false)}
         <Menu
           theme="dark"
-          selectedKeys={[selectedMenu]}
+          selectedKeys={[section]}
           mode="inline"
           style={{ borderRight: 0, background: '#001529' }}
           items={menuItems}
