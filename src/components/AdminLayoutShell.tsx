@@ -185,7 +185,7 @@ export function AdminLayoutShell({ session, onLogout, section, children }: Admin
             style={{ marginRight: 16 }}
           />
           <Title level={4} style={{ margin: 0 }}>
-            Santo Niño Admin
+            Santo Niño New Zealand Administration Portal
           </Title>
         </Header>
 
