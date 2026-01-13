@@ -4,8 +4,12 @@ import AntdRegistry from '@/components/AntdRegistry';
 import '../styles/globals.css'
 
 export const metadata: Metadata = {
-  title: 'Santo Niño Admin',
-  description: 'Content management system for santoninonz.github.io',
+  title: 'Santo Niño New Zealand - Administration Portal',
+  description: 'Content management system for Santo Niño New Zealand website',
+  icons: {
+    icon: '/santonino.svg',
+    apple: '/santonino.svg',
+  },
 }
 
 export const viewport = {
