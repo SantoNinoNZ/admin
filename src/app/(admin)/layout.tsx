@@ -8,6 +8,7 @@ import type { Session } from '@supabase/supabase-js'
 import { Spin, App, Result, Button } from 'antd'
 import { LockOutlined } from '@ant-design/icons'
 import { AdminLayoutShell } from '@/components/AdminLayoutShell'
+import { GoogleAuthComponent } from '@/components/GoogleAuth'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -78,9 +79,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (!session) {
-    // Redirect to login (root page)
-    router.push('/')
-    return null
+    // Show login page inline instead of redirecting to avoid loop
+    return (
+      <App>
+        <GoogleAuthComponent />
+      </App>
+    )
   }
 
   if (session && !isAuthorized) {
