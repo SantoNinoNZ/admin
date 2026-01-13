@@ -138,3 +138,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .claude/
+
+# PWA generated assets
+public/sw.js
+public/icons/
+public/favicon-32x32.png
+public/favicon-16x16.png

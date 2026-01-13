@@ -9,6 +9,8 @@ import { Spin, App, Result, Button } from 'antd'
 import { LockOutlined } from '@ant-design/icons'
 import { AdminLayoutShell } from '@/components/AdminLayoutShell'
 import { GoogleAuthComponent } from '@/components/GoogleAuth'
+import { OfflineIndicator } from '@/components/OfflineIndicator'
+import { InstallPWAButton } from '@/components/InstallPWAButton'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -110,9 +112,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <App>
       <main className="min-h-screen">
+        <OfflineIndicator />
         <AdminLayoutShell session={session} onLogout={handleLogout} section={section}>
           {children}
         </AdminLayoutShell>
+        <InstallPWAButton />
       </main>
     </App>
   )
