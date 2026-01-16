@@ -382,9 +382,6 @@ export class SupabaseAPI {
       published_at: post.published ? new Date().toISOString() : null
     }
 
-    // Debug: log the exact payload being sent
-    console.log('Creating post with data:', JSON.stringify(postData, null, 2))
-
     const { data, error } = await supabase
       .from('posts')
       .insert(postData)

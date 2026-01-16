@@ -56,10 +56,25 @@ export default function PostsPage() {
   }
 
   const handleSavePost = async (postData: PostFormData) => {
+    // Transform camelCase form data to snake_case for database
+    const payload = {
+      slug: postData.slug,
+      title: postData.title,
+      excerpt: postData.excerpt || null,
+      content: postData.content,
+      image_url: postData.imageUrl || null,
+      published: postData.published || false,
+      category_id: postData.categoryId || null,
+      meta_title: postData.metaTitle || null,
+      meta_description: postData.metaDescription || null,
+      meta_keywords: postData.metaKeywords || null,
+      og_image: postData.ogImage || null,
+    }
+
     if (selectedPost && selectedPost.id) {
-      await supabaseAPI.updatePost(selectedPost.id, postData)
+      await supabaseAPI.updatePost(selectedPost.id, payload, postData.tagIds)
     } else {
-      await supabaseAPI.createPost(postData)
+      await supabaseAPI.createPost(payload, postData.tagIds)
     }
     await loadPosts()
     setSelectedPost(null)
