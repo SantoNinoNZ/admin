@@ -102,12 +102,30 @@ export function PostList({ posts, onEdit, onDelete }: PostListProps) {
               avatar={<Avatar src={post.author_avatar_url || undefined} icon={<UserOutlined />} />}
               title={<a onClick={() => onEdit(post)}>{post.title}</a>}
               description={
-                <Space size="middle">
+                <Space size="middle" wrap>
+                  {post.author_name && (
+                    <Text type="secondary">
+                      <UserOutlined style={{ marginRight: 4 }} />
+                      {post.author_name}
+                    </Text>
+                  )}
                   <Text type="secondary">
-                    <CalendarOutlined style={{ marginRight: 8 }} />
+                    <CalendarOutlined style={{ marginRight: 4 }} />
                     {post.published_at
-                      ? new Date(post.published_at).toLocaleDateString()
-                      : `Created: ${new Date(post.created_at).toLocaleDateString()}`}
+                      ? new Date(post.published_at).toLocaleString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : `Created: ${new Date(post.created_at).toLocaleString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}`}
                   </Text>
                    {post.category_name && (
                     <Tag icon={<FolderOutlined />} color="blue">
