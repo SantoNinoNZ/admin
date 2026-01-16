@@ -976,6 +976,84 @@ export class SupabaseAPI {
 
     return data.length === 0
   }
+
+  // ============================================================================
+  // SITE BUILD / DEPLOY
+  // ============================================================================
+
+  /**
+   * Get the current build status from GitHub Actions
+   */
+  async getBuildStatus(): Promise<{
+    current: {
+      id: number
+      status: 'queued' | 'in_progress' | 'completed'
+      conclusion: 'success' | 'failure' | 'cancelled' | null
+      created_at: string
+      updated_at: string
+      html_url: string
+      event: string
+    } | null
+    lastSuccessful: {
+      id: number
+      completed_at: string
+      html_url: string
+    } | null
+  }> {
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      throw new Error('User not authenticated')
+    }
+
+    const { data, error } = await supabase.functions.invoke('get-build-status', {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+    })
+
+    if (error) {
+      throw new Error(`Failed to get build status: ${error.message}`)
+    }
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to get build status')
+    }
+
+    return {
+      current: data.current,
+      lastSuccessful: data.lastSuccessful,
+    }
+  }
+
+  /**
+   * Manually trigger a site rebuild
+   */
+  async triggerRebuild(): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      throw new Error('User not authenticated')
+    }
+
+    const { data, error } = await supabase.functions.invoke('trigger-rebuild', {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: {
+        manual: true,
+        timestamp: new Date().toISOString(),
+      },
+    })
+
+    if (error) {
+      throw new Error(`Failed to trigger rebuild: ${error.message}`)
+    }
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to trigger rebuild')
+    }
+  }
 }
 
 // Export singleton instance

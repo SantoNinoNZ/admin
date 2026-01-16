@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const GITHUB_TOKEN = Deno.env.get('GITHUB_TOKEN')
+const REBUILD_SECRET = Deno.env.get('REBUILD_SECRET') // Optional shared secret for verification
 const GITHUB_OWNER = 'SantoNinoNZ'
 const GITHUB_REPO = 'SantoNinoNZ.github.io'
 
@@ -11,12 +12,24 @@ serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-rebuild-secret',
       },
     })
   }
 
   try {
+    // Optional: Verify shared secret if configured
+    if (REBUILD_SECRET) {
+      const providedSecret = req.headers.get('x-rebuild-secret')
+      if (providedSecret !== REBUILD_SECRET) {
+        // Also check body for secret (for database triggers)
+        const body = await req.clone().json().catch(() => ({}))
+        if (body.secret !== REBUILD_SECRET) {
+          throw new Error('Invalid rebuild secret')
+        }
+      }
+    }
+
     // Verify GitHub token exists
     if (!GITHUB_TOKEN) {
       throw new Error('GITHUB_TOKEN not configured')
