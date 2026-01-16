@@ -56,6 +56,10 @@ export default function PostsPage() {
   }
 
   const handleSavePost = async (postData: PostFormData) => {
+    // Debug: log form data
+    console.log('handleSavePost received:', postData)
+    console.log('categoryId value:', postData.categoryId)
+
     // Transform camelCase form data to snake_case for database
     const payload = {
       slug: postData.slug,
@@ -70,6 +74,8 @@ export default function PostsPage() {
       meta_keywords: postData.metaKeywords || null,
       og_image: postData.ogImage || null,
     }
+
+    console.log('Payload being sent:', payload)
 
     if (selectedPost && selectedPost.id) {
       await supabaseAPI.updatePost(selectedPost.id, payload, postData.tagIds)
@@ -92,7 +98,26 @@ export default function PostsPage() {
       alert('Cannot edit static posts')
       return
     }
-    setSelectedPost(post as PostFormData)
+
+    // Transform snake_case database fields to camelCase for PostFormData
+    const formData: PostFormData = {
+      id: post.id,
+      slug: post.slug,
+      title: post.title,
+      excerpt: post.excerpt || undefined,
+      content: post.content,
+      imageUrl: post.image_url || undefined,
+      published: post.published,
+      publishedAt: post.published_at || undefined,
+      categoryId: post.category_id || undefined,
+      tagIds: Array.isArray(post.tags) ? post.tags.map((t: any) => t.id) : [],
+      metaTitle: post.meta_title || undefined,
+      metaDescription: post.meta_description || undefined,
+      metaKeywords: post.meta_keywords || undefined,
+      ogImage: post.og_image || undefined,
+    }
+
+    setSelectedPost(formData)
     setIsCreating(false)
   }
 
