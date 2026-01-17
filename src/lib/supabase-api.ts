@@ -981,6 +981,8 @@ export class SupabaseAPI {
   // SITE BUILD / DEPLOY
   // ============================================================================
 
+  private readonly SUPABASE_URL = 'https://uvxrdmwmscevovbbrnky.supabase.co'
+
   /**
    * Get the current build status from GitHub Actions
    */
@@ -1000,21 +1002,20 @@ export class SupabaseAPI {
       html_url: string
     } | null
   }> {
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      throw new Error('User not authenticated')
-    }
-
-    const { data, error } = await supabase.functions.invoke('get-build-status', {
+    const response = await fetch(`${this.SUPABASE_URL}/functions/v1/get-build-status`, {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({}),
     })
 
-    if (error) {
-      throw new Error(`Failed to get build status: ${error.message}`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to get build status: ${errorText}`)
     }
+
+    const data = await response.json()
 
     if (!data.success) {
       throw new Error(data.error || 'Failed to get build status')
@@ -1030,25 +1031,23 @@ export class SupabaseAPI {
    * Manually trigger a site rebuild
    */
   async triggerRebuild(): Promise<void> {
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session) {
-      throw new Error('User not authenticated')
-    }
-
-    const { data, error } = await supabase.functions.invoke('trigger-rebuild', {
+    const response = await fetch(`${this.SUPABASE_URL}/functions/v1/trigger-rebuild`, {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
       },
-      body: {
+      body: JSON.stringify({
         manual: true,
         timestamp: new Date().toISOString(),
-      },
+      }),
     })
 
-    if (error) {
-      throw new Error(`Failed to trigger rebuild: ${error.message}`)
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to trigger rebuild: ${errorText}`)
     }
+
+    const data = await response.json()
 
     if (!data.success) {
       throw new Error(data.error || 'Failed to trigger rebuild')
