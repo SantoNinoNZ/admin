@@ -31,15 +31,18 @@ jobs:
 
       - name: Reconcile migration history
         run: |
-          # Mark any local migrations that were applied outside of this pipeline
-          # as 'applied' so the CLI doesn't try to re-run them.
-          # This is safe to run repeatedly — already-applied versions are a no-op.
-          echo "Reconciling migration history..."
+          echo "Current migration state:"
           supabase migration list 2>&1 || true
 
-          # Repair versions that exist locally but aren't tracked in schema_migrations.
-          # These were applied manually or by earlier tooling before this pipeline existed.
-          for version in 006 009 010 011 012 013 014 015 016 017; do
+          # Versions 005 and 006 were superseded by 014-017 (renumbered to avoid duplicates).
+          # Remove them from schema_migrations so they no longer block the push.
+          echo "Reverting superseded versions 005 and 006..."
+          supabase migration repair --status reverted 005 2>/dev/null || true
+          supabase migration repair --status reverted 006 2>/dev/null || true
+
+          # Mark versions that were applied outside this pipeline as applied.
+          echo "Marking manually-applied migrations..."
+          for version in 009 010 011 012 013 014 015 016 017; do
             supabase migration repair --status applied $version 2>/dev/null || true
           done
 
