@@ -34,15 +34,14 @@ jobs:
           echo "Current migration state:"
           supabase migration list 2>&1 || true
 
-          # Versions 005 and 006 were superseded by 014-017 (renumbered to avoid duplicates).
-          # Remove them from schema_migrations so they no longer block the push.
-          echo "Reverting superseded versions 005 and 006..."
-          supabase migration repair --status reverted 005 2>/dev/null || true
+          # Version 006 had duplicate filenames (006_cleanup, 006_create_invites_system, 006_fix_rls)
+          # superseded by 015/016/017. Remove from schema_migrations since no local file remains.
+          echo "Reverting superseded version 006..."
           supabase migration repair --status reverted 006 2>/dev/null || true
 
           # Mark versions that were applied outside this pipeline as applied.
           echo "Marking manually-applied migrations..."
-          for version in 009 010 011 012 013 014 015 016 017; do
+          for version in 005 009 010 011 012 013 014 015 016 017; do
             supabase migration repair --status applied $version 2>/dev/null || true
           done
 
