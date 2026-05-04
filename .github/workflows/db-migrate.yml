@@ -5,17 +5,15 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main  # Or your primary branch (e.g., master)
+      - main
     paths:
-      - 'supabase/migrations/**' # Only run when migration files change
+      - 'supabase/migrations/**'
 
 jobs:
   migrate-db:
     runs-on: ubuntu-latest
-    
+
     env:
-      # The user must set these secrets in GitHub repository settings
-      # Settings > Secrets and variables > Actions > New repository secret
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
@@ -29,22 +27,26 @@ jobs:
           version: latest
 
       - name: Link to Supabase project
-        run: |
-          # Link to the Supabase project using the project ref from config.toml
-          supabase link --project-ref uvxrdmwmscevovbbrnky
+        run: supabase link --project-ref uvxrdmwmscevovbbrnky
 
-      - name: Push database migrations
+      - name: Reconcile migration history
         run: |
-          # Push only new migrations (non-interactive)
-          echo "Y" | supabase db push || true
+          # Mark any local migrations that were applied outside of this pipeline
+          # as 'applied' so the CLI doesn't try to re-run them.
+          # This is safe to run repeatedly — already-applied versions are a no-op.
+          echo "Reconciling migration history..."
+          supabase migration list 2>&1 || true
 
-          # If push fails due to existing migrations, try pushing with --include-all
-          # This will attempt to apply only unapplied migrations
-          echo "Attempting to push unapplied migrations..."
-          supabase db push --include-all || echo "All migrations already applied or manual intervention needed"
+          # Repair versions that exist locally but aren't tracked in schema_migrations.
+          # These were applied manually or by earlier tooling before this pipeline existed.
+          for version in 006 009 010 011 012 013 014 015 016 017; do
+            supabase migration repair --status applied $version 2>/dev/null || true
+          done
+
+      - name: Push new migrations
+        run: |
+          echo "Y" | supabase db push
+          echo "Migration push complete."
 
       - name: Verify migration
-        run: |
-          echo "Database migration complete. You can add verification steps here."
-          # For example, you could run a script to query the database
-          # and ensure the new schema is present.
+        run: supabase migration list
