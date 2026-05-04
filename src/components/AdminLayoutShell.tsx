@@ -21,6 +21,9 @@ import {
   TeamOutlined,
   MenuOutlined,
   CalendarOutlined,
+  HeartOutlined,
+  HomeOutlined,
+  MailOutlined,
 } from '@ant-design/icons'
 
 const { Sider, Content, Header } = Layout
@@ -56,6 +59,24 @@ export function AdminLayoutShell({ session, onLogout, section, children }: Admin
       icon: <CalendarOutlined />,
       label: 'Events',
       onClick: () => handleMenuClick('events'),
+    },
+    {
+      key: 'intercessions',
+      icon: <HeartOutlined />,
+      label: 'Intercessions',
+      onClick: () => handleMenuClick('intercessions'),
+    },
+    {
+      key: 'visitations',
+      icon: <HomeOutlined />,
+      label: 'Visitations',
+      onClick: () => handleMenuClick('visitations'),
+    },
+    {
+      key: 'inbox',
+      icon: <MailOutlined />,
+      label: 'Inbox',
+      onClick: () => handleMenuClick('inbox'),
     },
     {
       key: 'users',

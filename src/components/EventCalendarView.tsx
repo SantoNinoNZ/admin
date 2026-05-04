@@ -5,6 +5,7 @@ import { Calendar, dateFnsLocalizer, View } from 'react-big-calendar'
 import { format, parse as dateParse, startOfWeek, getDay, addMonths, isBefore, isAfter, isWithinInterval } from 'date-fns'
 import { RRule } from 'rrule'
 import type { Event as EventType, RecurringEvent, DatedEvent, EventSuspension } from '@/types/events'
+import type { HomeVisitRequest } from '@/types/requests'
 import { Card } from 'antd'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
@@ -27,17 +28,19 @@ interface CalendarEvent {
   end: Date
   allDay: boolean
   resource: {
-    event: EventType
+    event?: EventType
+    homeVisit?: HomeVisitRequest
     isSuspended?: boolean
-    type: 'recurring' | 'dated' | 'suspension'
+    type: 'recurring' | 'dated' | 'suspension' | 'home-visit'
   }
 }
 
 interface EventCalendarViewProps {
   events: EventType[]
+  homeVisitRequests?: HomeVisitRequest[]
 }
 
-export function EventCalendarView({ events }: EventCalendarViewProps) {
+export function EventCalendarView({ events, homeVisitRequests = [] }: EventCalendarViewProps) {
   const calendarEvents = useMemo(() => {
     const result: CalendarEvent[] = []
     const now = new Date()
@@ -168,8 +171,36 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
       }
     })
 
+    // Add scheduled home visit requests
+    homeVisitRequests.forEach(visit => {
+      if (!visit.scheduled_date || visit.status === 'cancelled') return
+
+      const visitDate = new Date(visit.scheduled_date)
+      if (visit.scheduled_time) {
+        const [hours, minutes] = visit.scheduled_time.split(':').map(Number)
+        visitDate.setHours(hours, minutes, 0, 0)
+      } else {
+        visitDate.setHours(9, 0, 0, 0)
+      }
+
+      const visitEnd = new Date(visitDate)
+      visitEnd.setHours(visitEnd.getHours() + 2)
+
+      result.push({
+        id: `visit-${visit.id}`,
+        title: `🏠 ${visit.name}`,
+        start: visitDate,
+        end: visitEnd,
+        allDay: false,
+        resource: {
+          homeVisit: visit,
+          type: 'home-visit',
+        },
+      })
+    })
+
     return result
-  }, [events])
+  }, [events, homeVisitRequests])
 
   const eventStyleGetter = (event: CalendarEvent) => {
     let backgroundColor = '#3174ad'
@@ -189,6 +220,9 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
     } else if (event.resource.type === 'dated') {
       backgroundColor = '#1890ff'
       borderColor = '#096dd9'
+    } else if (event.resource.type === 'home-visit') {
+      backgroundColor = '#fa8c16'
+      borderColor = '#d46b08'
     }
 
     return {
@@ -233,6 +267,10 @@ export function EventCalendarView({ events }: EventCalendarViewProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '20px', height: '20px', backgroundColor: '#ff4d4f', borderRadius: '4px' }}></div>
           <span>Suspension Period</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '20px', height: '20px', backgroundColor: '#fa8c16', borderRadius: '4px' }}></div>
+          <span>Home Visit (Scheduled)</span>
         </div>
       </div>
     </Card>

@@ -18,6 +18,7 @@ import type {
   isRecurringEvent,
   isDatedEvent
 } from '@/types/events'
+import type { PrayerRequest, HomeVisitRequest, ContactMessage } from '@/types/requests'
 
 export class SupabaseAPI {
 
@@ -975,6 +976,165 @@ export class SupabaseAPI {
     }
 
     return data.length === 0
+  }
+
+  // ============================================================================
+  // PRAYER REQUESTS (INTERCESSIONS)
+  // ============================================================================
+
+  async getPrayerRequests(): Promise<PrayerRequest[]> {
+    const { data, error } = await supabase
+      .from('prayer_requests')
+      .select('*')
+      .order('created_at', { ascending: false }) as any
+
+    if (error) throw new Error(`Failed to fetch prayer requests: ${error.message}`)
+    return data || []
+  }
+
+  async markPrayerRequestRead(id: string, userId: string, userEmail: string): Promise<void> {
+    const { error } = await supabase
+      .from('prayer_requests')
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString(),
+        read_by: userId,
+        read_by_email: userEmail,
+      } as any)
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to mark prayer request as read: ${error.message}`)
+  }
+
+  async updatePrayerRequestStatus(id: string, status: string, userId: string, userEmail: string): Promise<void> {
+    const { error } = await supabase
+      .from('prayer_requests')
+      .update({
+        status,
+        actioned_by: userId,
+        actioned_by_email: userEmail,
+        actioned_at: new Date().toISOString(),
+      } as any)
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to update prayer request status: ${error.message}`)
+  }
+
+  async deletePrayerRequest(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('prayer_requests')
+      .delete()
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to delete prayer request: ${error.message}`)
+  }
+
+  // ============================================================================
+  // HOME VISIT REQUESTS (VISITATIONS)
+  // ============================================================================
+
+  async getHomeVisitRequests(): Promise<HomeVisitRequest[]> {
+    const { data, error } = await supabase
+      .from('home_visit_requests')
+      .select('*')
+      .order('created_at', { ascending: false }) as any
+
+    if (error) throw new Error(`Failed to fetch home visit requests: ${error.message}`)
+    return data || []
+  }
+
+  async markHomeVisitRead(id: string, userId: string, userEmail: string): Promise<void> {
+    const { error } = await supabase
+      .from('home_visit_requests')
+      .update({
+        is_read: true,
+        read_at: new Date().toISOString(),
+        read_by: userId,
+        read_by_email: userEmail,
+      } as any)
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to mark home visit as read: ${error.message}`)
+  }
+
+  async updateHomeVisitRequest(id: string, updates: {
+    status?: string
+    scheduled_date?: string | null
+    scheduled_time?: string | null
+    notes?: string | null
+    actioned_by?: string
+    actioned_by_email?: string
+    actioned_at?: string
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('home_visit_requests')
+      .update(updates as any)
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to update home visit request: ${error.message}`)
+  }
+
+  async deleteHomeVisitRequest(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('home_visit_requests')
+      .delete()
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to delete home visit request: ${error.message}`)
+  }
+
+  // ============================================================================
+  // CONTACT MESSAGES (INBOX)
+  // ============================================================================
+
+  async getContactMessages(): Promise<ContactMessage[]> {
+    const { data, error } = await supabase
+      .from('contact_messages')
+      .select('*')
+      .order('created_at', { ascending: false }) as any
+
+    if (error) throw new Error(`Failed to fetch contact messages: ${error.message}`)
+    return data || []
+  }
+
+  async markContactMessageRead(id: string, userId: string, userEmail: string): Promise<void> {
+    const { error } = await supabase
+      .from('contact_messages')
+      .update({
+        is_read: true,
+        status: 'read',
+        read_at: new Date().toISOString(),
+        read_by: userId,
+        read_by_email: userEmail,
+      } as any)
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to mark contact message as read: ${error.message}`)
+  }
+
+  async updateContactMessageStatus(id: string, status: string, userId: string, userEmail: string): Promise<void> {
+    const updates: any = { status }
+    if (status === 'replied') {
+      updates.replied_by = userId
+      updates.replied_by_email = userEmail
+      updates.replied_at = new Date().toISOString()
+    }
+
+    const { error } = await supabase
+      .from('contact_messages')
+      .update(updates)
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to update contact message status: ${error.message}`)
+  }
+
+  async deleteContactMessage(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('contact_messages')
+      .delete()
+      .eq('id', id) as any
+
+    if (error) throw new Error(`Failed to delete contact message: ${error.message}`)
   }
 
   // ============================================================================

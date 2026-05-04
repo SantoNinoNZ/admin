@@ -9,6 +9,171 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      prayer_requests: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          contact: string | null
+          prayer_request: string
+          status: string
+          is_read: boolean
+          read_at: string | null
+          read_by: string | null
+          read_by_email: string | null
+          actioned_by: string | null
+          actioned_by_email: string | null
+          actioned_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          contact?: string | null
+          prayer_request: string
+          status?: string
+          is_read?: boolean
+          read_at?: string | null
+          read_by?: string | null
+          read_by_email?: string | null
+          actioned_by?: string | null
+          actioned_by_email?: string | null
+          actioned_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          contact?: string | null
+          prayer_request?: string
+          status?: string
+          is_read?: boolean
+          read_at?: string | null
+          read_by?: string | null
+          read_by_email?: string | null
+          actioned_by?: string | null
+          actioned_by_email?: string | null
+          actioned_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      home_visit_requests: {
+        Row: {
+          id: string
+          name: string
+          email: string | null
+          contact: string | null
+          address: string | null
+          requested_datetime: string
+          scheduled_date: string | null
+          scheduled_time: string | null
+          status: string
+          is_read: boolean
+          read_at: string | null
+          read_by: string | null
+          read_by_email: string | null
+          actioned_by: string | null
+          actioned_by_email: string | null
+          actioned_at: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email?: string | null
+          contact?: string | null
+          address?: string | null
+          requested_datetime: string
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          is_read?: boolean
+          read_at?: string | null
+          read_by?: string | null
+          read_by_email?: string | null
+          actioned_by?: string | null
+          actioned_by_email?: string | null
+          actioned_at?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string | null
+          contact?: string | null
+          address?: string | null
+          requested_datetime?: string
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          is_read?: boolean
+          read_at?: string | null
+          read_by?: string | null
+          read_by_email?: string | null
+          actioned_by?: string | null
+          actioned_by_email?: string | null
+          actioned_at?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      contact_messages: {
+        Row: {
+          id: string
+          name: string
+          email: string
+          subject: string | null
+          message: string
+          status: string
+          is_read: boolean
+          read_at: string | null
+          read_by: string | null
+          read_by_email: string | null
+          replied_by: string | null
+          replied_by_email: string | null
+          replied_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          email: string
+          subject?: string | null
+          message: string
+          status?: string
+          is_read?: boolean
+          read_at?: string | null
+          read_by?: string | null
+          read_by_email?: string | null
+          replied_by?: string | null
+          replied_by_email?: string | null
+          replied_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          email?: string
+          subject?: string | null
+          message?: string
+          status?: string
+          is_read?: boolean
+          read_at?: string | null
+          read_by?: string | null
+          read_by_email?: string | null
+          replied_by?: string | null
+          replied_by_email?: string | null
+          replied_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       authors: {
         Row: {
           avatar_url: string | null

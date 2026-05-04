@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabaseAPI } from '@/lib/supabase-api'
 import type { Event, CreateEventDTO, UpdateEventDTO } from '@/types/events'
+import type { HomeVisitRequest } from '@/types/requests'
 import { EventEditor } from '@/components/EventEditor'
 import { EventList } from '@/components/EventList'
 import { EventCalendarView } from '@/components/EventCalendarView'
@@ -13,6 +14,7 @@ const { Title } = Typography
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([])
+  const [homeVisits, setHomeVisits] = useState<HomeVisitRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -27,8 +29,12 @@ export default function EventsPage() {
     try {
       setLoading(true)
       setError('')
-      const data = await supabaseAPI.getEvents()
-      setEvents(data)
+      const [eventsData, visitsData] = await Promise.all([
+        supabaseAPI.getEvents(),
+        supabaseAPI.getHomeVisitRequests().catch(() => [] as HomeVisitRequest[]),
+      ])
+      setEvents(eventsData)
+      setHomeVisits(visitsData)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load events'
       setError(message)
@@ -100,7 +106,7 @@ export default function EventsPage() {
       {view === 'list' ? (
         <EventList events={events} onEdit={handleEditEvent} onDelete={handleDeleteEvent} />
       ) : (
-        <EventCalendarView events={events} />
+        <EventCalendarView events={events} homeVisitRequests={homeVisits} />
       )}
     </>
   )
