@@ -184,6 +184,7 @@ export function IntercessionsPage() {
         rowClassName={(record) => record.is_read ? '' : 'font-bold'}
         onRow={(record) => ({ onClick: () => openDrawer(record), style: { cursor: 'pointer' } })}
         pagination={{ pageSize: 20 }}
+        scroll={{ x: 'max-content' }}
       />
 
       <Drawer

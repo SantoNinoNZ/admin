@@ -212,6 +212,7 @@ export function VisitationsPage() {
         rowKey="id"
         onRow={(record) => ({ onClick: () => openDrawer(record), style: { cursor: 'pointer' } })}
         pagination={{ pageSize: 20 }}
+        scroll={{ x: 'max-content' }}
       />
 
       <Drawer
