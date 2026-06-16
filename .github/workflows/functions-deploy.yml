@@ -39,3 +39,9 @@ jobs:
               fi
             fi
           done
+
+      - name: Set edge function secrets
+        run: |
+          # Set the Cloudflare Turnstile secret key so submit-form can verify CAPTCHAs
+          supabase secrets set TURNSTILE_SECRET_KEY=${{ secrets.TURNSTILE_SECRET_KEY }} \
+            --project-ref "$SUPABASE_PROJECT_ID"
