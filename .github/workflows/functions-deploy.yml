@@ -28,8 +28,6 @@ jobs:
 
       - name: Deploy Supabase functions
         run: |
-          # This script loops through each function directory in supabase/functions
-          # and deploys it. It ignores the _shared directory.
           for F in supabase/functions/*; do
             if [ -d "$F" ]; then
               FUNCTION_NAME=$(basename "$F")
@@ -46,6 +44,11 @@ jobs:
 
       - name: Set edge function secrets
         run: |
-          # Set the Cloudflare Turnstile secret key so submit-form can verify CAPTCHAs
           supabase secrets set TURNSTILE_SECRET_KEY=${{ secrets.TURNSTILE_SECRET_KEY }} \
             --project-ref "$SUPABASE_PROJECT_ID"
+          
+          # Also set the Resend API Key for sending emails
+          if [ -n "${{ secrets.RESEND_API_KEY }}" ]; then
+            supabase secrets set RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} \
+              --project-ref "$SUPABASE_PROJECT_ID"
+          fi
