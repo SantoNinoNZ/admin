@@ -30,6 +30,78 @@ async function verifyTurnstileToken(token: string, remoteip?: string): Promise<b
   return result.success === true
 }
 
+function generateEmailHtml(formType: string, formData: any) {
+  const titleMap: Record<string, string> = {
+    'contact': 'New Contact Message',
+    'prayer': 'New Prayer Request',
+    'home-visit': 'New Home Visit Request',
+  }
+  const title = titleMap[formType] || 'New Submission'
+  
+  let fieldsHtml = ''
+  for (const [key, value] of Object.entries(formData)) {
+    if (value === undefined || value === null || value === '') continue;
+    const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+    const displayValue = typeof value === 'string' ? value.replace(/\n/g, '<br/>') : value;
+    
+    fieldsHtml += `
+      <tr>
+        <td style="padding: 12px 16px 12px 0; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #4b5563; width: 30%; vertical-align: top;">
+          ${label}
+        </td>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e5e7eb; color: #111827; vertical-align: top;">
+          ${displayValue}
+        </td>
+      </tr>
+    `
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); max-width: 600px; width: 100%; text-align: left;">
+          <tr>
+            <td style="background-color: #861D1D; padding: 30px 40px; text-align: center;">
+              <h1 style="color: #F4B34C; margin: 0; font-size: 24px; font-weight: 700;">Santo Niño Portal</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin-top: 0; color: #18181b; font-size: 20px;">${title}</h2>
+              <p style="color: #52525b; line-height: 1.6; margin-bottom: 24px;">
+                A new submission has been received from the website. Here are the details:
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                ${fieldsHtml}
+              </table>
+              <p style="color: #71717a; font-size: 14px; margin-top: 30px; line-height: 1.5;">
+                Please log in to the <a href="https://admin.santonino-nz.org" style="color: #861D1D; font-weight: 600; text-decoration: none;">Admin Portal</a> to take action on this request.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                This is an automated message from the Santo Niño NZ Web Portal.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -171,13 +243,8 @@ serve(async (req) => {
           if (!resendApiKey) {
             console.error('RESEND_API_KEY not set. Skipping email notification.')
           } else {
-            let subject = `New ${formType} submission`
-            let html = `<p>A new <strong>${formType}</strong> request has been submitted on the portal.</p>`
-            html += `<ul>`
-            for (const [key, value] of Object.entries(formData)) {
-               html += `<li><strong>${key}:</strong> ${value}</li>`
-            }
-            html += `</ul>`
+            let subject = formType === 'contact' ? 'New Contact Message' : formType === 'prayer' ? 'New Prayer Request' : 'New Home Visit Request'
+            let html = generateEmailHtml(formType, formData)
 
             // Send the email via Resend API
             const resendResponse = await fetch('https://api.resend.com/emails', {
