@@ -154,6 +154,58 @@ serve(async (req) => {
       })
     }
 
+    // 5. Email Notification Logic
+    try {
+      // Fetch all admin users from Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.admin.listUsers()
+      
+      if (authError) {
+        console.error('Failed to fetch admin users:', authError)
+      } else if (authData && authData.users) {
+        // Extract emails from all registered users
+        const adminEmails = authData.users.map((u) => u.email).filter(Boolean) as string[]
+        
+        if (adminEmails.length > 0) {
+          // It's best practice to use Deno.env.get for secrets, but we've included a fallback to your requested key
+          const resendApiKey = Deno.env.get('RESEND_API_KEY') || 're_hfax7kiw_QLCGG82UhkV3i5om2xQP92t1'
+          
+          let subject = `New ${formType} submission`
+          let html = `<p>A new <strong>${formType}</strong> request has been submitted on the portal.</p>`
+          html += `<ul>`
+          for (const [key, value] of Object.entries(formData)) {
+             html += `<li><strong>${key}:</strong> ${value}</li>`
+          }
+          html += `</ul>`
+
+          // Send the email via Resend API
+          const resendResponse = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${resendApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'Santo Niño Portal <noreply@santonino-nz.org>',
+              to: adminEmails,
+              subject: subject,
+              html: html,
+            }),
+          })
+
+          if (!resendResponse.ok) {
+            const resendError = await resendResponse.text()
+            console.error('Failed to send email via Resend:', resendError)
+          } else {
+            console.log('Email notification sent successfully to admins.')
+          }
+        } else {
+          console.log('No admin emails found to notify.')
+        }
+      }
+    } catch (emailErr) {
+      console.error('Unexpected error while sending email:', emailErr)
+    }
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
