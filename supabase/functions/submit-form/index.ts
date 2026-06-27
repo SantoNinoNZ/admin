@@ -83,7 +83,7 @@ function generateEmailHtml(formType: string, formData: any) {
                 ${fieldsHtml}
               </table>
               <p style="color: #71717a; font-size: 14px; margin-top: 30px; line-height: 1.5;">
-                Please log in to the <a href="https://admin.santonino-nz.org" style="color: #861D1D; font-weight: 600; text-decoration: none;">Admin Portal</a> to take action on this request.
+                Please log in to the <a href="https://santonino-nz.org/admin" style="color: #861D1D; font-weight: 600; text-decoration: none;">Admin Portal</a> to take action on this request.
               </p>
             </td>
           </tr>
