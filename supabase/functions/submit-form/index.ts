@@ -166,37 +166,40 @@ serve(async (req) => {
         const adminEmails = authData.users.map((u) => u.email).filter(Boolean) as string[]
         
         if (adminEmails.length > 0) {
-          // It's best practice to use Deno.env.get for secrets, but we've included a fallback to your requested key
-          const resendApiKey = Deno.env.get('RESEND_API_KEY') || 're_hfax7kiw_QLCGG82UhkV3i5om2xQP92t1'
+          const resendApiKey = Deno.env.get('RESEND_API_KEY')
           
-          let subject = `New ${formType} submission`
-          let html = `<p>A new <strong>${formType}</strong> request has been submitted on the portal.</p>`
-          html += `<ul>`
-          for (const [key, value] of Object.entries(formData)) {
-             html += `<li><strong>${key}:</strong> ${value}</li>`
-          }
-          html += `</ul>`
-
-          // Send the email via Resend API
-          const resendResponse = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${resendApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: 'Santo Niño Portal <noreply@santonino-nz.org>',
-              to: adminEmails,
-              subject: subject,
-              html: html,
-            }),
-          })
-
-          if (!resendResponse.ok) {
-            const resendError = await resendResponse.text()
-            console.error('Failed to send email via Resend:', resendError)
+          if (!resendApiKey) {
+            console.error('RESEND_API_KEY not set. Skipping email notification.')
           } else {
-            console.log('Email notification sent successfully to admins.')
+            let subject = `New ${formType} submission`
+            let html = `<p>A new <strong>${formType}</strong> request has been submitted on the portal.</p>`
+            html += `<ul>`
+            for (const [key, value] of Object.entries(formData)) {
+               html += `<li><strong>${key}:</strong> ${value}</li>`
+            }
+            html += `</ul>`
+
+            // Send the email via Resend API
+            const resendResponse = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: 'Santo Niño Portal <noreply@santonino-nz.org>',
+                to: adminEmails,
+                subject: subject,
+                html: html,
+              }),
+            })
+
+            if (!resendResponse.ok) {
+              const resendError = await resendResponse.text()
+              console.error('Failed to send email via Resend:', resendError)
+            } else {
+              console.log('Email notification sent successfully to admins.')
+            }
           }
         } else {
           console.log('No admin emails found to notify.')
