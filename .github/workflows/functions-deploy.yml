@@ -35,7 +35,11 @@ jobs:
               FUNCTION_NAME=$(basename "$F")
               if [ "$FUNCTION_NAME" != "_shared" ]; then
                 echo "Deploying function: $FUNCTION_NAME"
-                supabase functions deploy "$FUNCTION_NAME" --project-ref "$SUPABASE_PROJECT_ID"
+                if [ "$FUNCTION_NAME" = "submit-form" ]; then
+                  supabase functions deploy "$FUNCTION_NAME" --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
+                else
+                  supabase functions deploy "$FUNCTION_NAME" --project-ref "$SUPABASE_PROJECT_ID"
+                fi
               fi
             fi
           done
