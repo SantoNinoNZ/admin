@@ -13,8 +13,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
-          supabase functions --help || true
-          # Not sure of the exact command, let's try `supabase functions logs` or `supabase logs`? Wait, according to docs, it's `supabase functions logs <function-name> --project-ref $SUPABASE_PROJECT_ID` (Wait, project-ref might not be supported directly, let's link the project first).
           supabase link --project-ref $SUPABASE_PROJECT_ID
-          supabase functions logs submit-form > logs.txt
-          cat logs.txt
+          supabase logs --help
+          supabase functions --help
+          # Try to get edge function logs
+          supabase logs edge-logs --project-ref $SUPABASE_PROJECT_ID --function submit-form > logs1.txt || true
+          cat logs1.txt
+          supabase logs --project-ref $SUPABASE_PROJECT_ID > logs2.txt || true
+          cat logs2.txt
