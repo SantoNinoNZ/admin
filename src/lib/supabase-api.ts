@@ -1162,20 +1162,13 @@ export class SupabaseAPI {
       html_url: string
     } | null
   }> {
-    const response = await fetch(`${this.SUPABASE_URL}/functions/v1/get-build-status`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
+    const { data, error } = await supabase.functions.invoke('get-build-status', {
+      body: {},
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to get build status: ${errorText}`)
+    if (error) {
+      throw new Error(`Failed to get build status: ${error.message}`)
     }
-
-    const data = await response.json()
 
     if (!data.success) {
       throw new Error(data.error || 'Failed to get build status')
@@ -1191,23 +1184,16 @@ export class SupabaseAPI {
    * Manually trigger a site rebuild
    */
   async triggerRebuild(): Promise<void> {
-    const response = await fetch(`${this.SUPABASE_URL}/functions/v1/trigger-rebuild`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const { data, error } = await supabase.functions.invoke('trigger-rebuild', {
+      body: {
         manual: true,
         timestamp: new Date().toISOString(),
-      }),
+      },
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to trigger rebuild: ${errorText}`)
+    if (error) {
+      throw new Error(`Failed to trigger rebuild: ${error.message}`)
     }
-
-    const data = await response.json()
 
     if (!data.success) {
       throw new Error(data.error || 'Failed to trigger rebuild')
