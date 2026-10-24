@@ -84,8 +84,26 @@ export class GitHubAPI {
   /**
    * Get content of a specific markdown file
    */
-  static async getFileContent(fileName: string): Promise<{ content: string; sha: string }> {
+  static async getFileContent(
+    fileName: string,
+    downloadUrl?: string,
+    fileSha?: string
+  ): Promise<{ content: string; sha: string }> {
     try {
+      const rawUrl =
+        downloadUrl ||
+        `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${POSTS_PATH}/${encodeURIComponent(fileName)}`;
+      const rawResponse = await fetch(rawUrl);
+
+      if (rawResponse.ok) {
+        const content = await rawResponse.text();
+        return {
+          content,
+          sha: fileSha || '',
+        };
+      }
+
+      // Fallback to GitHub REST API if raw URL fetch fails
       const data: GitHubFileContent = await this.fetchGitHub(
         `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${POSTS_PATH}/${fileName}`
       );

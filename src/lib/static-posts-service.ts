@@ -8,11 +8,6 @@ export class StaticPostsService {
    * @param limit - Optional limit on number of posts to fetch (default: 50 for performance)
    */
   static async getAllStaticPosts(limit: number = 50): Promise<StaticPost[]> {
-    if (!GitHubAPI.isConfigured()) {
-      console.warn('GitHub token not configured, skipping static posts');
-      return [];
-    }
-
     try {
       console.log('Fetching static posts from GitHub...');
       const files = await GitHubAPI.listPostFiles();
@@ -29,7 +24,7 @@ export class StaticPostsService {
         const batchPosts = await Promise.all(
           batch.map(async (file) => {
             try {
-              const { content, sha } = await GitHubAPI.getFileContent(file.name);
+              const { content, sha } = await GitHubAPI.getFileContent(file.name, file.download_url, file.sha);
               const { frontmatter, content: markdownContent } = parseMarkdown(content);
 
               const slug = frontmatter.slug || getSlugFromFilename(file.name);
