@@ -1162,12 +1162,24 @@ export class SupabaseAPI {
       html_url: string
     } | null
   }> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const headers: Record<string, string> = {}
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`
+    }
+
     const { data, error } = await supabase.functions.invoke('get-build-status', {
+      headers,
       body: {},
     })
 
     if (error) {
-      throw new Error(`Failed to get build status: ${error.message}`)
+      let details = error.message
+      if ('context' in error && error.context instanceof Response) {
+        const bodyText = await error.context.text().catch(() => '')
+        if (bodyText) details = bodyText
+      }
+      throw new Error(`Failed to get build status: ${details}`)
     }
 
     if (!data.success) {
@@ -1184,7 +1196,14 @@ export class SupabaseAPI {
    * Manually trigger a site rebuild
    */
   async triggerRebuild(): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const headers: Record<string, string> = {}
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`
+    }
+
     const { data, error } = await supabase.functions.invoke('trigger-rebuild', {
+      headers,
       body: {
         manual: true,
         timestamp: new Date().toISOString(),
@@ -1192,7 +1211,12 @@ export class SupabaseAPI {
     })
 
     if (error) {
-      throw new Error(`Failed to trigger rebuild: ${error.message}`)
+      let details = error.message
+      if ('context' in error && error.context instanceof Response) {
+        const bodyText = await error.context.text().catch(() => '')
+        if (bodyText) details = bodyText
+      }
+      throw new Error(`Failed to trigger rebuild: ${details}`)
     }
 
     if (!data.success) {

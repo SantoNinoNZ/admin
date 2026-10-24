@@ -33,7 +33,7 @@ jobs:
               FUNCTION_NAME=$(basename "$F")
               if [ "$FUNCTION_NAME" != "_shared" ]; then
                 echo "Deploying function: $FUNCTION_NAME"
-                if [ "$FUNCTION_NAME" = "submit-form" ]; then
+                if [ "$FUNCTION_NAME" = "submit-form" ] || [ "$FUNCTION_NAME" = "trigger-rebuild" ] || [ "$FUNCTION_NAME" = "get-build-status" ]; then
                   supabase functions deploy "$FUNCTION_NAME" --project-ref "$SUPABASE_PROJECT_ID" --no-verify-jwt
                 else
                   supabase functions deploy "$FUNCTION_NAME" --project-ref "$SUPABASE_PROJECT_ID"
@@ -50,5 +50,11 @@ jobs:
           # Also set the Resend API Key for sending emails
           if [ -n "${{ secrets.RESEND_API_KEY }}" ]; then
             supabase secrets set RESEND_API_KEY=${{ secrets.RESEND_API_KEY }} \
+              --project-ref "$SUPABASE_PROJECT_ID"
+          fi
+
+          # Also set the GitHub token for triggering site rebuilds and checking build status
+          if [ -n "${{ secrets.NEXT_PUBLIC_GITHUB_TOKEN }}" ]; then
+            supabase secrets set GITHUB_TOKEN=${{ secrets.NEXT_PUBLIC_GITHUB_TOKEN }} \
               --project-ref "$SUPABASE_PROJECT_ID"
           fi

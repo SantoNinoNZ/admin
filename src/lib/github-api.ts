@@ -28,15 +28,30 @@ export class GitHubAPI {
     const url = `https://api.github.com${endpoint}`;
     console.log('GitHub API Request:', url);
 
-    const response = await fetch(url, {
+    const headers: Record<string, string> = {
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
+
+    if (GITHUB_TOKEN) {
+      headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`;
+    }
+
+    let response = await fetch(url, {
       ...options,
-      headers: {
-        'Authorization': `Bearer ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
     });
+
+    // Fallback to unauthenticated request for public read operations if token expired
+    if (response.status === 401 && (!options.method || options.method === 'GET') && GITHUB_TOKEN) {
+      console.warn('GitHub token returned 401, retrying public GET without Authorization header...');
+      const { Authorization: _, ...publicHeaders } = headers;
+      response = await fetch(url, {
+        ...options,
+        headers: publicHeaders,
+      });
+    }
 
     if (!response.ok) {
       const error = await response.text();
