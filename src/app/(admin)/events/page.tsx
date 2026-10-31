@@ -7,6 +7,7 @@ import type { HomeVisitRequest } from '@/types/requests'
 import { EventEditor } from '@/components/EventEditor'
 import { EventList } from '@/components/EventList'
 import { EventCalendarView } from '@/components/EventCalendarView'
+import { DeployStatusCard } from '@/components/DeployStatusCard'
 import { Button, Spin, Alert, Typography, Segmented } from 'antd'
 import { PlusOutlined, CalendarOutlined, UnorderedListOutlined } from '@ant-design/icons'
 
@@ -83,6 +84,7 @@ export default function EventsPage() {
 
   return (
     <>
+      <DeployStatusCard />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <div>
