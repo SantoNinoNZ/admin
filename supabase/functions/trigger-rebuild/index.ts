@@ -12,7 +12,7 @@ serve(async (req) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-rebuild-secret',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-rebuild-secret, cache-control, pragma, expires, x-requested-with',
       },
     })
   }
