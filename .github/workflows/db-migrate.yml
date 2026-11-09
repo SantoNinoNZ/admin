@@ -27,28 +27,28 @@ jobs:
           version: latest
 
       - name: Link to Supabase project
-        run: supabase link --project-ref uvxrdmwmscevovbbrnky
+        run: supabase link --project-ref uvxrdmwmscevovbbrnky -p "$SUPABASE_DB_PASSWORD"
 
       - name: Reconcile migration history
         run: |
           echo "Current migration state:"
-          supabase migration list 2>&1 || true
+          supabase migration list --remote 2>&1 || true
 
           # Version 006 had duplicate filenames (006_cleanup, 006_create_invites_system, 006_fix_rls)
           # superseded by 015/016/017. Remove from schema_migrations since no local file remains.
           echo "Reverting superseded version 006..."
-          supabase migration repair --status reverted 006 2>/dev/null || true
+          supabase migration repair --status reverted 006 -p "$SUPABASE_DB_PASSWORD" 2>/dev/null || true
 
           # Mark versions that were applied outside this pipeline as applied.
           echo "Marking manually-applied migrations..."
           for version in 005 009 010 011 012 013 014 015 016 017; do
-            supabase migration repair --status applied $version 2>/dev/null || true
+            supabase migration repair --status applied $version -p "$SUPABASE_DB_PASSWORD" 2>/dev/null || true
           done
 
       - name: Push new migrations
         run: |
-          echo "Y" | supabase db push
+          echo "Y" | supabase db push --linked -p "$SUPABASE_DB_PASSWORD"
           echo "Migration push complete."
 
       - name: Verify migration
-        run: supabase migration list
+        run: supabase migration list --remote
